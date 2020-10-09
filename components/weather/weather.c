@@ -7,7 +7,7 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_log.h"
-
+#include "cJSON.h"
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
@@ -84,12 +84,10 @@ void my_num2asc(uint16_t val,char *ptr)
 	ptr[i]='\0';
 }
 
-uint8_t weather_get(const char *cityid,weather_type_t type)
+uint8_t weather_get(const char *cityid, weather_type_t type)
 {
     char *buf;
     const uint16_t buf_size=4096;
-    int ret;
-    char user_https=0;
     
     buf = malloc(buf_size);
     // We now create a URI for the request
@@ -111,126 +109,140 @@ uint8_t weather_get(const char *cityid,weather_type_t type)
     strcat(buf, HOST);
     strcat(buf, "\r\nConnection: close\r\n\r\n");
 
-    if(user_https)
-    {
-        /* const char *WEATHER_URL = "https://api.thinkpage.cn";
-        struct esp_tls *tls;
-        esp_tls_cfg_t cfg = {
-            .cacert_pem_buf  = server_root_cert_pem_start,
-            .cacert_pem_bytes = server_root_cert_pem_end - server_root_cert_pem_start,
-        };
-        
-        ESP_LOGI(TAG, "esp_tls_conn_http_new");
-        tls = esp_tls_conn_http_new(WEATHER_URL, &cfg);
-        
-        if(tls != NULL) {
-            ESP_LOGI(TAG, "Connection established...");
-        } else {
-            ESP_LOGE(TAG, "Connection failed...");
-            esp_tls_conn_delete(tls);
-            return 1;
-        }
-        
-        char *REQUEST=buf;
-        size_t written_bytes = 0;
-        do {
-            ret = esp_tls_conn_write(tls, 
-                                     REQUEST + written_bytes, 
-                                     strlen(REQUEST) - written_bytes);
-            if (ret >= 0) {
-                ESP_LOGI(TAG, "%d bytes written", ret);
-                written_bytes += ret;
-            } else if (ret != MBEDTLS_ERR_SSL_WANT_READ  && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-                ESP_LOGE(TAG, "esp_tls_conn_write  returned 0x%x", ret);
-                esp_tls_conn_delete(tls);
-                return 2;
-            }
-        } while(written_bytes < strlen(REQUEST));
-
-        do
-        {
-            int len = sizeof(buf) - 1;
-            bzero(buf, sizeof(buf));
-            ret = esp_tls_conn_read(tls, (char *)buf, len);
-            if(ret == MBEDTLS_ERR_SSL_WANT_WRITE  || ret == MBEDTLS_ERR_SSL_WANT_READ)
-                continue;
-            
-            if(ret < 0)
-            {
-                ESP_LOGE(TAG, "esp_tls_conn_read  returned -0x%x", -ret);
-                break;
-            }
-
-            if(ret == 0)
-            {
-                ESP_LOGI(TAG, "connection closed");
-                break;
-            }
-            len = ret;
-            ESP_LOGD(TAG, "%d bytes read", len);
-            
-        } while(1);
-
-        
-        
-        esp_tls_conn_delete(tls); */
-
-    }else
-    {
-        const struct addrinfo hints = {
-            .ai_family = AF_INET,
-            .ai_socktype = SOCK_STREAM,
-        };
-        struct addrinfo *res;
-        int sock=-1;
-        int err = getaddrinfo(HOST, "80", &hints, &res);
-
-        do{
-            if(err != 0 || res == NULL) {
-                ESP_LOGE(TAG, "DNS lookup failed err=%d res=%p", err, res);
-                break;
-            }
-            sock =  socket(res->ai_family, res->ai_socktype, IPPROTO_IP);
-            if (sock < 0) {
-                ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-                break;
-            }
-            err = connect(sock, res->ai_addr, res->ai_addrlen);
-            if (err != 0) {
-                ESP_LOGE(TAG, "Socket unable to connect: errno %d", errno);
-                break;
-            }
-            vTaskDelay(20 / portTICK_PERIOD_MS);
-            err = send(sock, buf, strlen(buf), 0);
-            if (err < 0) {
-                ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
-                break;
-            }
-            int len = recv(sock, buf, buf_size - 1, 0);
-            // Error occured during receiving
-            if (len < 0) {
-                ESP_LOGE(TAG, "recv failed: errno %d", errno);
-                break;
-            }
-            // Data received
-            else {
-                buf[len] = 0; // Null-terminate whatever we received and treat like a string
-                ESP_LOGI(TAG, "Received %d bytes from %s:", len,HOST);
-            }
-            vTaskDelay(20 / portTICK_PERIOD_MS);
-        }while(0);
-
-        if (sock != -1) {
-            shutdown(sock, SHUT_RDWR);
-            close(sock);
-        }
+#if WEATHER_USE_HTTPS
+    
+    const char *WEATHER_URL = "https://api.thinkpage.cn";
+    struct esp_tls *tls;
+    esp_tls_cfg_t cfg = {
+        .cacert_pem_buf  = server_root_cert_pem_start,
+        .cacert_pem_bytes = server_root_cert_pem_end - server_root_cert_pem_start,
+    };
+    
+    ESP_LOGI(TAG, "esp_tls_conn_http_new");
+    tls = esp_tls_conn_http_new(WEATHER_URL, &cfg);
+    
+    if(tls != NULL) {
+        ESP_LOGI(TAG, "Connection established...");
+    } else {
+        ESP_LOGE(TAG, "Connection failed...");
+        esp_tls_conn_delete(tls);
+        return 1;
     }
+    
+    char *REQUEST=buf;
+    size_t written_bytes = 0;
+    do {
+        ret = esp_tls_conn_write(tls, 
+                                    REQUEST + written_bytes, 
+                                    strlen(REQUEST) - written_bytes);
+        if (ret >= 0) {
+        ESP_LOGI(TAG, "%d bytes written", ret);
+            written_bytes += ret;
+        } else if (ret != MBEDTLS_ERR_SSL_WANT_READ  && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+            ESP_LOGE(TAG, "esp_tls_conn_write  returned 0x%x", ret);
+            esp_tls_conn_delete(tls);
+            return 2;
+        }
+    } while(written_bytes < strlen(REQUEST));
+
+    do
+    {
+        int len = sizeof(buf) - 1;
+        bzero(buf, sizeof(buf));
+        ret = esp_tls_conn_read(tls, (char *)buf, len);
+        if(ret == MBEDTLS_ERR_SSL_WANT_WRITE  || ret == MBEDTLS_ERR_SSL_WANT_READ)
+            continue;
+        
+        if(ret < 0)
+        {
+            ESP_LOGE(TAG, "esp_tls_conn_read  returned -0x%x", -ret);
+            break;
+        }
+
+        if(ret == 0)
+        {
+            ESP_LOGI(TAG, "connection closed");
+            break;
+        }
+        len = ret;
+        ESP_LOGD(TAG, "%d bytes read", len);
+        
+    } while(1);
+    
+    esp_tls_conn_delete(tls);
+
+#else
+    
+    const struct addrinfo hints = {
+        .ai_family = AF_INET,
+        .ai_socktype = SOCK_STREAM,
+    };
+    struct addrinfo *res;
+    int sock=-1;
+    int err = getaddrinfo(HOST, "80", &hints, &res);
+
+    do{
+        if(err != 0 || res == NULL) {
+            ESP_LOGE(TAG, "DNS lookup failed err=%d res=%p", err, res);
+            break;
+        }
+        sock =  socket(res->ai_family, res->ai_socktype, IPPROTO_IP);
+        if (sock < 0) {
+            ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+            break;
+        }
+        err = connect(sock, res->ai_addr, res->ai_addrlen);
+        if (err != 0) {
+            ESP_LOGE(TAG, "Socket unable to connect: errno %d", errno);
+            break;
+        }
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+        err = send(sock, buf, strlen(buf), 0);
+        if (err < 0) {
+            ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
+            break;
+        }
+        int len = recv(sock, buf, buf_size - 1, 0);
+        // Error occured during receiving
+        if (len < 0) {
+            ESP_LOGE(TAG, "recv failed: errno %d", errno);
+            break;
+        }
+        // Data received
+        else {
+            buf[len] = 0; // Null-terminate whatever we received and treat like a string
+            ESP_LOGI(TAG, "Received %d bytes from %s:", len,HOST);
+        }
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+    }while(0);
+
+    if (sock != -1) {
+        shutdown(sock, SHUT_RDWR);
+        close(sock);
+        }
+#endif
 
     {
         char *dataPtr;
         dataPtr = strstr((const char*)buf, "\r\n\r\n");	//跳过http头
         if(dataPtr != NULL)
         {
+            dataPtr += 2;
+
+            cJSON * root = NULL;
+            cJSON * item = NULL;//cjson对象
+
+            root = cJSON_Parse(dataPtr);
+            if (!root) 
+            {
+                ESP_LOGE(TAG, "Error before: [%s]\n",cJSON_GetErrorPtr());
+            }
+            else
+            {
+                printf("%s\n", "有格式的方式打印Json:");
+                printf("%s\n\n", cJSON_Print(root));
+            }
+
             if(WEATHER_TYPE_NOW == type)  //
             {
                 dataPtr = strstr(dataPtr, "\"now\":");
@@ -239,7 +251,7 @@ uint8_t weather_get(const char *cityid,weather_type_t type)
                     if(NULL!=(dataPtr = strstr(dataPtr, "\"code\":")))Weather.now[0] = my_asc2num(dataPtr+8);
                     if(NULL!=(dataPtr = strstr(dataPtr, "\"temperature\":")))Weather.now[1] = my_asc2num(dataPtr+15);
                     Weather.mask |= 0x80;
-                    ESP_LOGE(TAG, "get now weather ok");
+                    ESP_LOGI(TAG, "get now weather ok");
                 }
             }
             else
@@ -259,9 +271,10 @@ uint8_t weather_get(const char *cityid,weather_type_t type)
                     if(NULL!=(dataPtr = strstr(dataPtr, "\"high\":")))Weather.day_2[1] = my_asc2num(dataPtr+8);
                     if(NULL!=(dataPtr = strstr(dataPtr, "\"low\":")))Weather.day_2[2] = my_asc2num(dataPtr+7);
                     Weather.mask |= 0x80;
-                    ESP_LOGE(TAG, "get daily weather ok");
+                    ESP_LOGI(TAG, "get daily weather ok");
                 }
             }
+            cJSON_Delete(root);
         }
     }
     free(buf);

@@ -7,12 +7,6 @@
 #define LED_MATRIX_MAX_HEIGHT  32
 
 
-//屏幕显示缓存
-typedef struct{
- uint8_t R_Buf[LED_MATRIX_MAX_WIDTH/8][LED_MATRIX_MAX_HEIGHT];
- uint8_t G_Buf[LED_MATRIX_MAX_WIDTH/8][LED_MATRIX_MAX_HEIGHT];
-}LED_Matrix_Buf_TypeDef;
-
 
 //字体信息保存地址,占33个字节,第1个字节用于标记字库是否存在.后续每8个字节一组,分别保存起始地址和文件大小														   
 //extern uint32_t FONTINFOADDR;	

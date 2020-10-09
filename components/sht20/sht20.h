@@ -1,5 +1,5 @@
-#ifndef __IIC__H
-#define __IIC__H
+#ifndef __SHT20__H
+#define __SHT20__H
 
 #include "esp_log.h"
 #include "driver/i2c.h"

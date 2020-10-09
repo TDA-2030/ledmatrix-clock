@@ -1,6 +1,4 @@
 
-
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
@@ -13,12 +11,6 @@
 
 #include "led_matrix.h"
 #include "oledfont.h"
-
-
-
-//用来保存字库基本信息，地址，大小等
-FONT_Info_TypeDef ftinfo;
-
 
 
 #define GPIO_STCP      32
@@ -67,9 +59,14 @@ FONT_Info_TypeDef ftinfo;
 //设置扫描的译码器 //32,33,34,35
 #define SET_DATATFT(dat)	{GPIO.out_w1tc = 0x1e000;GPIO.out_w1ts = (dat);}
 
+//屏幕显示缓存
+typedef struct{
+ uint8_t R_Buf[LED_MATRIX_MAX_WIDTH/8][LED_MATRIX_MAX_HEIGHT];
+ uint8_t G_Buf[LED_MATRIX_MAX_WIDTH/8][LED_MATRIX_MAX_HEIGHT];
+}LED_Matrix_Buf_t;
 
 //屏幕显示缓存
-LED_Matrix_Buf_TypeDef LED_Matrix_Buf;
+static LED_Matrix_Buf_t LED_Matrix_Buf;
 static uint32_t led_scan_line[16]={0};/*16行段码*/
 
 
@@ -383,140 +380,6 @@ void LedMatrix_Draw_Circle(uint16_t x0,uint16_t y0,uint16_t r)
 	}
 }
 
-
-
-// //code 字符指针开始
-// //从字库中查找出字模
-// //code 字符串的开始地址,GBK码
-// //mat  数据存放地址 (size/8+((size%8)?1:0))*(size) bytes大小	
-// //size:字体大小
-// void Get_HzMat(unsigned char *code,unsigned char *mat,uint8_t size)
-// {		    
-// 	unsigned char qh,ql;
-// 	unsigned char i;
-// 	unsigned long foffset;
-// 	uint8_t csize=(size/8+((size%8)?1:0))*(size);//得到字体一个字符对应点阵集所占的字节数	 
-// 	qh=*code;
-// 	ql=*(++code);
-// 	if(qh<0x81||ql<0x40||ql==0xff||qh==0xff)//非 常用汉字
-// 	{   		    
-// 	    for(i=0;i<csize;i++)*mat++=0x00;//填充满格
-// 	    return; //结束访问
-// 	}          
-// 	if(ql<0x7f)ql-=0x40;//注意!
-// 	else ql-=0x41;
-// 	qh-=0x81;   
-// 	foffset=((unsigned long)190*qh+ql)*csize;	//得到字库中的字节偏移量  		  
-// 	switch(size)
-// 	{
-// 		case 12:
-// 			W25QXX_Read(mat,foffset+ftinfo.f12addr,csize);
-// 			break;
-// 		case 16:
-// 			W25QXX_Read(mat,foffset+ftinfo.f16addr,csize);
-// 			break;
-// 		case 24:
-// 			W25QXX_Read(mat,foffset+ftinfo.f24addr,csize);
-// 			break;
-// 		case 32:
-// 			W25QXX_Read(mat,foffset+ftinfo.f32addr,csize);
-// 			break;
-// 		default:break;
-// 	}
-// }  
-// //显示一个指定大小的汉字
-// //x,y :汉字的坐标
-// //font:汉字GBK码
-// //size:字体大小
-// //mode:0,正常显示,1,叠加显示	   
-// void Show_Font(uint16_t x,uint16_t y,uint8_t *font,uint8_t size,uint8_t mode)
-// {
-// 	uint8_t temp,t,t1;
-// 	uint16_t y0=y;
-// 	uint8_t dzk[128];
-// 	uint8_t csize=(size/8+((size%8)?1:0))*(size);//得到字体一个字符对应点阵集所占的字节数	
-	
-// 	if(size!=12&&size!=16&&size!=24&&size!=32)return;	//不支持的size
-// 	Get_HzMat(font,dzk,size);	//得到相应大小的点阵数据 
-
-// 	for(t=0;t<csize;t++)
-// 	{   												   
-// 		temp=dzk[t];			//得到点阵数据                          
-// 		for(t1=0;t1<8;t1++)
-// 		{
-// 			if(temp&0x80)LedMatrix_DrawPoint(x,y,POINT_COLOR);
-// 			else if(mode==0)LedMatrix_DrawPoint(x,y,BACK_COLOR); 
-// 			temp<<=1;
-// 			y++;
-// 			if((y-y0)==size)
-// 			{
-// 				y=y0;
-// 				x++;
-// 				break;
-// 			}
-// 		}
-// 	}
-// }
-
-// //在指定位置开始显示一个字符串	    
-// //支持自动换行
-// //(x,y):起始坐标
-// //width,height:区域
-// //str  :字符串
-// //size :字体大小
-// //mode:0,非叠加方式;1,叠加方式    	   		   
-// void Show_Str(uint16_t x,uint16_t y,uint16_t width,uint16_t height,uint8_t*str,uint8_t size,uint8_t mode)
-// {					
-// 	uint16_t x0=x;
-// 	uint16_t y0=y;							  	  
-//     uint8_t bHz=0;     //字符或者中文  
-	
-	
-//     while(*str!=0)//数据未结束
-//     { 
-//         if(!bHz)
-//         {
-// 	        if(*str>0x80)bHz=1;//中文 
-// 	        else              //字符
-// 	        {
-//                 if(x>(x0+width-size/2))//换行
-// 				{				   
-// 					y+=size;
-// 					x=x0;	   
-// 				}							    
-// 		        if(y>(y0+height-size))break;//越界返回      
-// 		        if(*str==13)//换行符号
-// 		        {         
-// 		            y+=size;
-// 					x=x0;
-// 		            str++; 
-// 		        }  
-// 		        else LedMatrix_ShowChar(x,y,*str,size);//有效部分写入 
-// 				str++; 
-// 		        x+=size/2; //字符,为全字的一半 
-// 	        }
-//         }else//中文 
-//         {     
-//             bHz=0;//有汉字库    
-//             if(x>(x0+width-size))//换行
-// 			{	    
-// 				y+=size;
-// 				x=x0;		  
-// 			}
-// 	        if(y>(y0+height-size))break;//越界返回  						     
-// 	        Show_Font(x,y,str,size,mode); //显示这个汉字,空心显示 
-// 	        str+=2; 
-// 	        x+=size;//下一个汉字偏移	    
-//         }						 
-//     }   
-// }  		
-
-
-
-
-#define TIMER_DIVIDER         16  //  Hardware timer clock divider
-#define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to seconds
-
 /*
  * Timer group0 ISR handler
  *
@@ -562,7 +425,7 @@ static void example_tg0_timer_init(int timer_idx,
 {
     /* Select and initialize basic parameters of the timer */
     timer_config_t config;
-    config.divider = TIMER_DIVIDER;
+    config.divider = 16;
     config.counter_dir = TIMER_COUNT_UP;
     config.counter_en = TIMER_PAUSE;
     config.alarm_en = TIMER_ALARM_EN;
@@ -575,7 +438,7 @@ static void example_tg0_timer_init(int timer_idx,
     timer_set_counter_value(TIMER_GROUP_0, timer_idx, 0x00000000ULL);
 
     /* Configure the alarm value and the interrupt on alarm. */
-    timer_set_alarm_value(TIMER_GROUP_0, timer_idx, timer_interval_sec * TIMER_SCALE);
+    timer_set_alarm_value(TIMER_GROUP_0, timer_idx, timer_interval_sec * (TIMER_BASE_CLK / config.divider));
     timer_enable_intr(TIMER_GROUP_0, timer_idx);
     timer_isr_register(TIMER_GROUP_0, timer_idx, isr_fn, 
         (void *) timer_idx, ESP_INTR_FLAG_IRAM, NULL);
@@ -626,19 +489,6 @@ void LedMatrix_SetLight(uint32_t val)
     ledc_update_duty(ledc_channel.speed_mode, ledc_channel.channel);
 }
 
-
-
-
-static void gpio_task_example(void *arg)
-{
-
-    for (;;)
-    {	
-        vTaskDelay(2000 / portTICK_RATE_MS);
-		
-    }
-}
-
 void LedMatrix_init(void)
 {
 	int8_t j; 
@@ -678,12 +528,6 @@ void LedMatrix_init(void)
 	{
 		LedMatrix_DrawRectangle(i, i, LED_MATRIX_MAX_WIDTH-1-i, LED_MATRIX_MAX_HEIGHT-1-i);
 	}
-
-
-    //start gpio task
-    xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
-
- 
 }
 
 

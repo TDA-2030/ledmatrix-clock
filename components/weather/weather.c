@@ -19,7 +19,7 @@
 
 static const char *TAG = "weather";
 
-Weather_TypeDef Weather;//天气结构体
+static weather_info_t g_weather_info;//天气结构体
 
 /* Root cert for howsmyssl.com, taken from server_root_cert.pem
 
@@ -43,6 +43,56 @@ const char* HOST = "api.thinkpage.cn";
 const char* APIKEY = "1uqo4k3in0oluhpo";        //API KEY
 const char* NOW_API = "/weather/now.json";
 const char* DAILY_API = "/weather/daily.json";
+
+
+
+static const char* weather_code[] = {
+    "晴",
+    "晴",
+    "晴",
+    "晴",
+    "多云",
+    "晴间多云",
+    "晴间多云",
+    "大部多云",
+    "大部多云",
+    "阴",
+    "阵雨",
+    "雷阵雨",
+    "雷阵雨伴有冰雹",
+    "小雨",
+    "中雨",
+    "大雨",
+    "暴雨",
+    "大暴雨",
+    "特大暴雨",
+    "冻雨",
+    "雨夹雪",
+    "阵雪",
+    "小雪",
+    "中雪",
+    "大雪",
+    "暴雪",
+    "浮尘",
+    "扬沙",
+    "沙尘暴",
+    "强沙尘暴",
+    "雾",
+    "霾",
+    "风",
+    "大风",
+    "飓风",
+    "热带风暴",
+    "龙卷风",
+    "冷",
+    "热",
+    "未知",
+};
+
+char *weather_code2str(uint8_t code)
+{
+    return (char*)weather_code[code];
+}
 
 
 int16_t my_asc2num(char *ptr)
@@ -229,8 +279,8 @@ uint8_t weather_get(const char *cityid, weather_type_t type)
         {
             dataPtr += 2;
 
-            cJSON * root = NULL;
-            cJSON * item = NULL;//cjson对象
+            cJSON *root = NULL;
+            cJSON *results = NULL;
 
             root = cJSON_Parse(dataPtr);
             if (!root) 
@@ -239,41 +289,43 @@ uint8_t weather_get(const char *cityid, weather_type_t type)
             }
             else
             {
-                printf("%s\n", "有格式的方式打印Json:");
-                printf("%s\n\n", cJSON_Print(root));
+                // printf("%s\n", "有格式的方式打印Json:");
+                // printf("%s\n\n", cJSON_Print(root));
+                if(WEATHER_TYPE_NOW == type)
+                {
+                    cJSON *item = NULL;
+                    cJSON *now = NULL;
+                    cJSON *code = NULL;
+                    cJSON *temp = NULL;
+
+                    results = cJSON_GetObjectItem(root, "results");
+                    item = cJSON_GetArrayItem(results, 0);
+                    now = cJSON_GetObjectItem(item, "now");
+                    code = cJSON_GetObjectItem(now, "code");
+                    temp = cJSON_GetObjectItem(now, "temperature");
+                    g_weather_info.now.code = code->valueint;
+                    g_weather_info.now.temp = temp->valueint;
+                    ESP_LOGI(TAG, "%d, %d", g_weather_info.now.code, g_weather_info.now.temp);
+                }
+                else
+                {
+                    cJSON *item = NULL;
+                    cJSON *now = NULL;
+                    
+
+                    results = cJSON_GetObjectItem(root, "results");
+                    item = cJSON_GetArrayItem(results, 0);
+
+                    now = cJSON_GetObjectItem(item, "daily");
+                    code = cJSON_GetObjectItem(now, "code");
+                    temp = cJSON_GetObjectItem(now, "temperature");
+                    g_weather_info.now.code = code->valueint;
+                    g_weather_info.now.temp = temp->valueint;
+                    ESP_LOGI(TAG, "%d, %d", g_weather_info.now.code, g_weather_info.now.temp);
+                }
             }
 
-            if(WEATHER_TYPE_NOW == type)  //
-            {
-                dataPtr = strstr(dataPtr, "\"now\":");
-                if(dataPtr != NULL)
-                {
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"code\":")))Weather.now[0] = my_asc2num(dataPtr+8);
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"temperature\":")))Weather.now[1] = my_asc2num(dataPtr+15);
-                    Weather.mask |= 0x80;
-                    ESP_LOGI(TAG, "get now weather ok");
-                }
-            }
-            else
-            {
-                dataPtr = strstr(dataPtr, "\"daily\":");
-                if(dataPtr != NULL)
-                {
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"code_day\":")))Weather.day_0[0] = my_asc2num(dataPtr+12);
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"high\":")))Weather.day_0[1] = my_asc2num(dataPtr+8);
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"low\":")))Weather.day_0[2] = my_asc2num(dataPtr+7);
-                    
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"code_day\":")))Weather.day_1[0] = my_asc2num(dataPtr+12);
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"high\":")))Weather.day_1[1] = my_asc2num(dataPtr+8);
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"low\":")))Weather.day_1[2] = my_asc2num(dataPtr+7);
-                    
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"code_day\":")))Weather.day_2[0] = my_asc2num(dataPtr+12);
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"high\":")))Weather.day_2[1] = my_asc2num(dataPtr+8);
-                    if(NULL!=(dataPtr = strstr(dataPtr, "\"low\":")))Weather.day_2[2] = my_asc2num(dataPtr+7);
-                    Weather.mask |= 0x80;
-                    ESP_LOGI(TAG, "get daily weather ok");
-                }
-            }
+            
             cJSON_Delete(root);
         }
     }

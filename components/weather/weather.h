@@ -9,20 +9,30 @@ typedef enum{
     WEATHER_TYPE_DAY,
 }weather_type_t;
 
+struct weather_now{
+	uint8_t code;
+	int8_t temp;
+};
+
+struct weather_day{
+	uint8_t code;
+	int8_t temp_low;
+	int8_t temp_high;
+	uint16_t wind_direction_degree;
+	float wind_speed;
+	uint8_t wind_scale;
+	uint8_t humidity;
+};
+
 typedef struct{
 
-	char mask;    //状态标志
-	char now[2];  //实时天气状况代码、气温
-	
-	char day_0[3]; //分别天气状况代码、最高气温、最低气温
-	char day_1[3];
-	char day_2[3];
-}Weather_TypeDef;
-extern Weather_TypeDef Weather;//天气结构体
+	struct weather_now now;
+	struct weather_day day[3];
+}weather_info_t;
 
 
 
 
-uint8_t weather_get(const char *cityid,weather_type_t type);
+uint8_t weather_get(const char *cityid, weather_type_t type);
 
 #endif

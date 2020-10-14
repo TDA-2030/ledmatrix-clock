@@ -272,63 +272,75 @@ uint8_t weather_get(const char *cityid, weather_type_t type)
         }
 #endif
 
-    {
+    do {
         char *dataPtr;
         dataPtr = strstr((const char*)buf, "\r\n\r\n");	//跳过http头
-        if(dataPtr != NULL)
+        if(dataPtr == NULL)
         {
-            dataPtr += 2;
-
-            cJSON *root = NULL;
-            cJSON *results = NULL;
-
-            root = cJSON_Parse(dataPtr);
-            if (!root) 
-            {
-                ESP_LOGE(TAG, "Error before: [%s]\n",cJSON_GetErrorPtr());
-            }
-            else
-            {
-                // printf("%s\n", "有格式的方式打印Json:");
-                // printf("%s\n\n", cJSON_Print(root));
-                if(WEATHER_TYPE_NOW == type)
-                {
-                    cJSON *item = NULL;
-                    cJSON *now = NULL;
-                    cJSON *code = NULL;
-                    cJSON *temp = NULL;
-
-                    results = cJSON_GetObjectItem(root, "results");
-                    item = cJSON_GetArrayItem(results, 0);
-                    now = cJSON_GetObjectItem(item, "now");
-                    code = cJSON_GetObjectItem(now, "code");
-                    temp = cJSON_GetObjectItem(now, "temperature");
-                    g_weather_info.now.code = code->valueint;
-                    g_weather_info.now.temp = temp->valueint;
-                    ESP_LOGI(TAG, "%d, %d", g_weather_info.now.code, g_weather_info.now.temp);
-                }
-                else
-                {
-                    cJSON *item = NULL;
-                    cJSON *now = NULL;
-                    
-
-                    results = cJSON_GetObjectItem(root, "results");
-                    item = cJSON_GetArrayItem(results, 0);
-
-                    now = cJSON_GetObjectItem(item, "daily");
-                    code = cJSON_GetObjectItem(now, "code");
-                    temp = cJSON_GetObjectItem(now, "temperature");
-                    g_weather_info.now.code = code->valueint;
-                    g_weather_info.now.temp = temp->valueint;
-                    ESP_LOGI(TAG, "%d, %d", g_weather_info.now.code, g_weather_info.now.temp);
-                }
-            }
-
-            
-            cJSON_Delete(root);
+            ESP_LOGE(TAG, "Can't find http data payload");
+            break;
         }
-    }
+        dataPtr += 2;
+
+        cJSON *root = NULL;
+        cJSON *results = NULL;
+
+        root = cJSON_Parse(dataPtr);
+        if (!root) 
+        {
+            ESP_LOGE(TAG, "Error before: [%s]\n",cJSON_GetErrorPtr());
+            break;
+        }
+
+        printf("%s\n\n", cJSON_Print(root));
+        if(WEATHER_TYPE_NOW == type)
+        {
+            cJSON *item = NULL;
+            cJSON *now = NULL;
+            cJSON *code = NULL;
+            cJSON *temp = NULL;
+
+            results = cJSON_GetObjectItem(root, "results");
+            if (NULL == results)
+            {ESP_LOGE(TAG, "Get obj results failed");
+                break;
+            }
+            
+            item = cJSON_GetArrayItem(results, 0);
+            now = cJSON_GetObjectItem(item, "now");
+            if (NULL == now)
+            {ESP_LOGE(TAG, "Get obj now failed");
+                break;
+            }
+            code = cJSON_GetObjectItem(now, "code");
+            temp = cJSON_GetObjectItem(now, "temperature");
+            g_weather_info.now.code = code->valueint;
+            g_weather_info.now.temp = temp->valueint;
+            ESP_LOGI(TAG, "%d, %d", g_weather_info.now.code, g_weather_info.now.temp);
+        }
+        else
+        {
+            cJSON *item = NULL;
+            cJSON *daily = NULL;
+            cJSON *code = NULL;
+            cJSON *temp = NULL;
+            
+
+            results = cJSON_GetObjectItem(root, "results");
+            item = cJSON_GetArrayItem(results, 0);
+
+            daily = cJSON_GetObjectItem(item, "daily");
+            code = cJSON_GetObjectItem(daily, "code");
+            temp = cJSON_GetObjectItem(daily, "temperature");
+            g_weather_info.day[0].code = code->valueint;
+            ESP_LOGI(TAG, "%d, %d", g_weather_info.now.code, g_weather_info.now.temp);
+        }
+        
+        cJSON_Delete(root);
+        
+    }while(0);
+    
+
     free(buf);
     
     return 0;

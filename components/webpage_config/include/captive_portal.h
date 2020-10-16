@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include "esp_err.h"
+#include "esp_wifi.h"
 
 /**
   * @brief Start captive portal

@@ -26,7 +26,6 @@ static bool g_configed=0;
 esp_err_t captive_portal_start(const char *ap_ssid, const char *ap_pwd, bool *configured)
 {
     esp_err_t ret;
-    
 
     ESP_LOGI(TAG, "Setup Wifi ...");
     wifiIinitialize(ap_ssid, ap_pwd, &g_configed);

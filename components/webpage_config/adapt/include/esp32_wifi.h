@@ -19,7 +19,7 @@ void wifiStartScan(void);
 void wifiStopScan(void);
 uint16_t wifiScanDone(wifi_ap_record_t **ap_records);
 
-esp_err_t wifiIinitialize(char *ap_ssid, char *ap_pwd, bool *configured);
+esp_err_t wifiIinitialize(const char *ap_ssid, const char *ap_pwd, bool *configured);
 esp_err_t wifiConnected(uint32_t ticks_to_wait);
 
 void wifiShowStatus(void);

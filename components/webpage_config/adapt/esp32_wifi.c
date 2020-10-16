@@ -493,7 +493,7 @@ static esp_err_t is_configured(bool *configured)
     return ESP_OK;
 }
 
-esp_err_t wifiIinitialize(char *ap_ssid, char *ap_pwd, bool *configured)
+esp_err_t wifiIinitialize(const char *ap_ssid, const char *ap_pwd, bool *configured)
 {
     ESP_LOGD(TAG, "wifi initialize ...");
     *configured = 0;

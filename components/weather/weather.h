@@ -15,11 +15,12 @@ struct weather_now{
 };
 
 struct weather_day{
-	uint8_t code;
+	uint8_t code_day;
+	uint8_t code_night;
 	int8_t temp_low;
 	int8_t temp_high;
 	uint16_t wind_direction_degree;
-	float wind_speed;
+	uint16_t wind_speed;
 	uint8_t wind_scale;
 	uint8_t humidity;
 };
@@ -32,7 +33,8 @@ typedef struct{
 
 
 
-
 uint8_t weather_get(const char *cityid, weather_type_t type);
+
+char *weather_code2str(uint8_t code);
 
 #endif

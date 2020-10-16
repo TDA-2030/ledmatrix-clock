@@ -19,32 +19,22 @@
 
 static const char *TAG = "weather";
 
+#define ITEM_CHECK(a)  if(!(a)) {                                             \
+        ESP_LOGE(TAG,"%s:%d (%s):%s", __FILE__, __LINE__, __FUNCTION__, "pointer invalid");      \
+        break;                                                                   \
+        }
+
 static weather_info_t g_weather_info;//天气结构体
-
-/* Root cert for howsmyssl.com, taken from server_root_cert.pem
-
-   The PEM file was extracted from the output of this command:
-   openssl s_client -showcerts -connect www.howsmyssl.com:443 </dev/null
-
-   The CA root cert is the last cert given in the chain of certs.
-
-   To embed it in the app binary, the PEM file is named
-   in the component.mk COMPONENT_EMBED_TXTFILES variable.
-*/
-extern const uint8_t server_root_cert_pem_start[] asm("_binary_server_root_cert_pem_start");
-extern const uint8_t server_root_cert_pem_end[]   asm("_binary_server_root_cert_pem_end");
 
 
 //心知天气获取连接：
 //https://api.thinkpage.cn/v3/weather/daily.json?key=1uqo4k3in0oluhpo&location=jian&language=en&unit=c
 //https://api.thinkpage.cn/v3/weather/daily.json?key=KEY&location=[/url]城市&language=zh-Hans&unit=c&start=-1&days=5
 
-const char* HOST = "api.thinkpage.cn";
-const char* APIKEY = "1uqo4k3in0oluhpo";        //API KEY
-const char* NOW_API = "/weather/now.json";
-const char* DAILY_API = "/weather/daily.json";
-
-
+static const char* HOST = "api.thinkpage.cn";
+static const char* APIKEY = "1uqo4k3in0oluhpo";        //API KEY
+static const char* NOW_API = "/weather/now.json";
+static const char* DAILY_API = "/weather/daily.json";
 
 static const char* weather_code[] = {
     "晴",
@@ -95,7 +85,7 @@ char *weather_code2str(uint8_t code)
 }
 
 
-int16_t my_asc2num(char *ptr)
+static int16_t my_asc2num(char *ptr)
 {
 	uint16_t Data=0;
 	int16_t res=0;
@@ -115,7 +105,7 @@ int16_t my_asc2num(char *ptr)
 	return res;
 }
 
-void my_num2asc(uint16_t val,char *ptr)
+static void my_num2asc(uint16_t val,char *ptr)
 {
 	uint8_t i=0,j=0;
 	
@@ -163,6 +153,8 @@ uint8_t weather_get(const char *cityid, weather_type_t type)
     
     const char *WEATHER_URL = "https://api.thinkpage.cn";
     struct esp_tls *tls;
+    extern const uint8_t server_root_cert_pem_start[] asm("_binary_server_root_cert_pem_start");
+    extern const uint8_t server_root_cert_pem_end[]   asm("_binary_server_root_cert_pem_end");
     esp_tls_cfg_t cfg = {
         .cacert_pem_buf  = server_root_cert_pem_start,
         .cacert_pem_bytes = server_root_cert_pem_end - server_root_cert_pem_start,
@@ -292,57 +284,95 @@ uint8_t weather_get(const char *cityid, weather_type_t type)
             break;
         }
 
-        printf("%s\n\n", cJSON_Print(root));
+        ESP_LOGD(TAG, "\n%s\n\n", cJSON_Print(root));
         if(WEATHER_TYPE_NOW == type)
         {
-            cJSON *item = NULL;
+            cJSON *array_item = NULL;
             cJSON *now = NULL;
-            cJSON *code = NULL;
-            cJSON *temp = NULL;
-
-            results = cJSON_GetObjectItem(root, "results");
-            if (NULL == results)
-            {ESP_LOGE(TAG, "Get obj results failed");
-                break;
-            }
-            
-            item = cJSON_GetArrayItem(results, 0);
-            now = cJSON_GetObjectItem(item, "now");
-            if (NULL == now)
-            {ESP_LOGE(TAG, "Get obj now failed");
-                break;
-            }
-            code = cJSON_GetObjectItem(now, "code");
-            temp = cJSON_GetObjectItem(now, "temperature");
-            g_weather_info.now.code = code->valueint;
-            g_weather_info.now.temp = temp->valueint;
-            ESP_LOGI(TAG, "%d, %d", g_weather_info.now.code, g_weather_info.now.temp);
-        }
-        else
-        {
             cJSON *item = NULL;
-            cJSON *daily = NULL;
-            cJSON *code = NULL;
-            cJSON *temp = NULL;
-            
 
             results = cJSON_GetObjectItem(root, "results");
-            item = cJSON_GetArrayItem(results, 0);
+            ITEM_CHECK(NULL != results);
+            
+            array_item = cJSON_GetArrayItem(results, 0);
+            ITEM_CHECK(NULL != array_item);
 
-            daily = cJSON_GetObjectItem(item, "daily");
-            code = cJSON_GetObjectItem(daily, "code");
-            temp = cJSON_GetObjectItem(daily, "temperature");
-            g_weather_info.day[0].code = code->valueint;
-            ESP_LOGI(TAG, "%d, %d", g_weather_info.now.code, g_weather_info.now.temp);
+            now = cJSON_GetObjectItem(array_item, "now");
+            ITEM_CHECK(NULL != now);
+            
+            item = cJSON_GetObjectItem(now, "code");
+            ITEM_CHECK(NULL != item);
+            g_weather_info.now.code = my_asc2num(item->valuestring);
+
+            item = cJSON_GetObjectItem(now, "temperature");
+            ITEM_CHECK(NULL != item);
+            g_weather_info.now.temp = my_asc2num(item->valuestring);
+
+            ESP_LOGI(TAG, "[now] code=%d(%s), temp=%d", g_weather_info.now.code, 
+            weather_code2str(g_weather_info.now.code), g_weather_info.now.temp);
+        } else {
+            cJSON *item = NULL;
+            cJSON *daily_item = NULL;
+            cJSON *array_item = NULL;
+
+            results = cJSON_GetObjectItem(root, "results");
+            ITEM_CHECK(NULL != results);
+            
+            array_item = cJSON_GetArrayItem(results, 0);
+            ITEM_CHECK(NULL != array_item);
+
+            array_item = cJSON_GetObjectItem(array_item, "daily");
+            ITEM_CHECK(NULL != array_item);
+
+            uint32_t cnt = cJSON_GetArraySize(array_item);
+            for(int i = 0; i < cnt; i++)
+            {
+                daily_item = cJSON_GetArrayItem(array_item, i);
+                ITEM_CHECK(NULL != daily_item);
+                
+                item = cJSON_GetObjectItem(daily_item, "code_day");
+                ITEM_CHECK(NULL != item);
+                g_weather_info.day[i].code_day = my_asc2num(item->valuestring);
+
+                item = cJSON_GetObjectItem(daily_item, "code_night");
+                ITEM_CHECK(NULL != item);
+                g_weather_info.day[i].code_night = my_asc2num(item->valuestring);
+
+                item = cJSON_GetObjectItem(daily_item, "high");
+                ITEM_CHECK(NULL != item);
+                g_weather_info.day[i].temp_high = my_asc2num(item->valuestring);
+
+                item = cJSON_GetObjectItem(daily_item, "low");
+                ITEM_CHECK(NULL != item);
+                g_weather_info.day[i].temp_low = my_asc2num(item->valuestring);
+
+                item = cJSON_GetObjectItem(daily_item, "wind_direction_degree");
+                ITEM_CHECK(NULL != item);
+                g_weather_info.day[i].wind_direction_degree = my_asc2num(item->valuestring);
+
+                item = cJSON_GetObjectItem(daily_item, "wind_speed");
+                ITEM_CHECK(NULL != item);
+                g_weather_info.day[i].wind_speed = my_asc2num(item->valuestring);
+
+                item = cJSON_GetObjectItem(daily_item, "humidity");
+                ITEM_CHECK(NULL != item);
+                g_weather_info.day[i].humidity = my_asc2num(item->valuestring);
+
+                ESP_LOGI(TAG, "[daily] code_day=%d(%s), code_night=%d(%s), temp=%d~%d, wind_speed=%d, wind_degree=%d, humidity=%d", 
+                g_weather_info.day[i].code_day, weather_code2str(g_weather_info.day[i].code_day), 
+                g_weather_info.day[i].code_night, weather_code2str(g_weather_info.day[i].code_night), 
+                g_weather_info.day[i].temp_low, g_weather_info.day[i].temp_high,
+                g_weather_info.day[i].wind_speed, g_weather_info.day[i].wind_direction_degree, 
+                g_weather_info.day[i].humidity
+                );
+            }
         }
         
         cJSON_Delete(root);
         
     }while(0);
-    
 
     free(buf);
-    
     return 0;
 }
 

@@ -24,6 +24,9 @@
 #ifndef _APP_SNTP_H_
 #define _APP_SNTP_H_
 
+#include <time.h>
+#include <sys/time.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

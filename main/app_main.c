@@ -18,6 +18,7 @@
 #include "app_sntp.h"
 #include "app_main.h"
 #include "calendar.h"
+#include "mp3_player.h"
 
 static const char *TAG = "app_main";
 
@@ -65,15 +66,16 @@ void Display_task(void *pvParameter)
     while (1) {
 
         calendar_t *cdr = get_calendar_time();
+        LedMatrix_Set_point_color(COLOR_GREEN);
         //if (time_last != 0)
         {
 
             LedMatrix_ShowNum(x, y, cdr->hour, 2, 16);
-            LedMatrix_Fill(x + 17, y + 4, x + 18, y + 5, 1);
-            LedMatrix_Fill(x + 17, y + 10, x + 18, y + 11, 1);
+            LedMatrix_Fill(x + 17, y + 4, x + 18, y + 5, LedMatrix_Get_point_color());
+            LedMatrix_Fill(x + 17, y + 10, x + 18, y + 11, LedMatrix_Get_point_color());
             LedMatrix_ShowNum(x + 20, y, cdr->min, 2, 16);
-            LedMatrix_Fill(x + 37, y + 4, x + 38, y + 5, 1);
-            LedMatrix_Fill(x + 37, y + 10, x + 38, y + 11, 1);
+            LedMatrix_Fill(x + 37, y + 4, x + 38, y + 5, LedMatrix_Get_point_color());
+            LedMatrix_Fill(x + 37, y + 10, x + 38, y + 11, LedMatrix_Get_point_color());
             LedMatrix_ShowNum(x + 40, y, cdr->sec, 2, 16);
 
             // LedMatrix_ShowNum(0, 16, sht20Info.humidity * 100, 4, 12);
@@ -150,4 +152,8 @@ void app_main()
 
     xTaskCreate(&Display_task, "Display_task", 1024 * 2, NULL, 6, NULL);
     xTaskCreate(&net_handle_task, "net_handle_task", 1024 * 6, NULL, 5, NULL);
+
+    mp3_player_init();
+    mp3_player_start("/spiffs/01.mp3");
+    mp3_player_set_volume(-8);
 }

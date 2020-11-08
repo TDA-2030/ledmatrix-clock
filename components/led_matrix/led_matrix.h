@@ -24,6 +24,10 @@ void LedMatrix_DrawRectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 void LedMatrix_Draw_Circle(uint16_t x0,uint16_t y0,uint16_t r);
 void LedMatrix_DrawBMP(uint16_t x0, uint16_t y0,uint16_t x1, uint16_t y1,const uint8_t BMP[]);
 
+void LedMatrix_Set_point_color(uint16_t color);
+void LedMatrix_Set_back_color(uint16_t color);
+uint16_t LedMatrix_Get_point_color(void);
+uint16_t LedMatrix_Get_back_color(void);
 void LedMatrix_SetLight(uint32_t val);
 
 

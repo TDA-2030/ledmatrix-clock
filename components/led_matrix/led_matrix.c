@@ -236,7 +236,7 @@ void LedMatrix_init(void)
         led_scan_line[j] = i << GPIO_A;
     }
 
-    gpio_config_t io_conf;
+    gpio_config_t io_conf={0};
     io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_OUTPUT;
     io_conf.pin_bit_mask = GPIO_OUTPUT_PIN_SEL;
@@ -310,6 +310,24 @@ void LedMatrix_Fill(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t
             LedMatrix_DrawPoint(x, y, dot);
         }
     }
+}
+
+void LedMatrix_Set_point_color(uint16_t color)
+{
+    POINT_COLOR = color;
+}
+uint16_t LedMatrix_Get_point_color(void)
+{
+    return POINT_COLOR;
+}
+
+void LedMatrix_Set_back_color(uint16_t color)
+{
+    BACK_COLOR = color;
+}
+uint16_t LedMatrix_Get_back_color(void)
+{
+    return BACK_COLOR;
 }
 
 //在指定位置显示一个字符,包括部分字符

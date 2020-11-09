@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name mylib)(type Legacy)(uri ${KIPRJMOD}/mylib.lib)(options "")(descr ""))
+  (lib (name esp32-wrover)(type Legacy)(uri ${KIPRJMOD}/library/esp32-wrover-kicad-master/esp32-wrover.lib)(options "")(descr ""))
+)

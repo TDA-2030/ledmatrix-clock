@@ -10,13 +10,13 @@
 #include "oledfont.h"
 
 
-#define GPIO_STCP      21
-#define GPIO_SHCP      22
+#define GPIO_STCP      18
+#define GPIO_SHCP      19
 #define GPIO_OE        23
-#define GPIO_SDA_R1    27
-#define GPIO_SDA_G1    18
-#define GPIO_SDA_R2    32
-#define GPIO_SDA_G2    19
+#define GPIO_SDA_R1    22
+#define GPIO_SDA_G1    27
+#define GPIO_SDA_R2    21
+#define GPIO_SDA_G2    32
 
 #define GPIO_A         12
 #define GPIO_B         13
@@ -45,11 +45,11 @@
 #define SDA_G_TOP_HIGH GPIO.out_w1ts = (1ULL << GPIO_SDA_G1)
 #define SDA_G_TOP_LOW  GPIO.out_w1tc = (1ULL << GPIO_SDA_G1)
 
-#define SDA_R_HIGH     GPIO.out1_w1ts.data = (1ULL << (GPIO_SDA_R2-32))
-#define SDA_R_LOW      GPIO.out1_w1tc.data = (1ULL << (GPIO_SDA_R2-32))
+#define SDA_R_HIGH     GPIO.out_w1ts = (1ULL << (GPIO_SDA_R2))
+#define SDA_R_LOW      GPIO.out_w1tc = (1ULL << (GPIO_SDA_R2))
 
-#define SDA_G_HIGH     GPIO.out_w1ts = (1ULL << GPIO_SDA_G2)
-#define SDA_G_LOW      GPIO.out_w1tc = (1ULL << GPIO_SDA_G2)
+#define SDA_G_HIGH     GPIO.out1_w1ts.data = (1ULL << (GPIO_SDA_G2-32))
+#define SDA_G_LOW      GPIO.out1_w1tc.data = (1ULL << (GPIO_SDA_G2-32))
 
 
 #define SET_LINE(dat)   {GPIO.out_w1tc = 0xf000;GPIO.out_w1ts = (dat);}
@@ -247,11 +247,14 @@ void LedMatrix_init(void)
     OE_LOW;
 
     ledc_init();
-    LedMatrix_SetLight(100);
+    LedMatrix_SetLight(20);
 
+    LedMatrix_Set_point_color(COLOR_YELLOW);
+    LedMatrix_Fill(0, 0, 63, 31, COLOR_YELLOW);
     for (uint8_t i = 0; i < 12; i += 2) {
         LedMatrix_DrawRectangle(i, i, LED_MATRIX_MAX_WIDTH - 1 - i, LED_MATRIX_MAX_HEIGHT - 1 - i);
     }
+    LedMatrix_Set_point_color(COLOR_RED);
 }
 
 

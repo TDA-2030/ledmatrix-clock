@@ -66,10 +66,6 @@ static uint32_t led_scan_line[16] = {0}; /*16行段码*/
 
 
 
-//屏幕的画笔颜色和背景色
-static uint16_t POINT_COLOR = 0x01; //画笔颜色
-static uint16_t BACK_COLOR  = 0x00;  //背景色
-
 // 定时刷新屏幕
 void IRAM_ATTR led_matrix_flush(void)
 {
@@ -249,12 +245,7 @@ void LedMatrix_init(void)
     ledc_init();
     LedMatrix_SetLight(20);
 
-    LedMatrix_Set_point_color(COLOR_YELLOW);
     LedMatrix_Fill(0, 0, 63, 31, COLOR_YELLOW);
-    for (uint8_t i = 0; i < 12; i += 2) {
-        LedMatrix_DrawRectangle(i, i, LED_MATRIX_MAX_WIDTH - 1 - i, LED_MATRIX_MAX_HEIGHT - 1 - i);
-    }
-    LedMatrix_Set_point_color(COLOR_RED);
 }
 
 
@@ -315,228 +306,48 @@ void LedMatrix_Fill(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t
     }
 }
 
-void LedMatrix_Set_point_color(uint16_t color)
-{
-    POINT_COLOR = color;
-}
-uint16_t LedMatrix_Get_point_color(void)
-{
-    return POINT_COLOR;
-}
 
-void LedMatrix_Set_back_color(uint16_t color)
+void LedMatrix_DrawBMP(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, const uint8_t *BMP)
 {
-    BACK_COLOR = color;
-}
-uint16_t LedMatrix_Get_back_color(void)
-{
-    return BACK_COLOR;
-}
+    uint16_t x, y;
+    uint16_t x1 = x0 + width - 1;
+    uint16_t y1 = y0 + height - 1;
 
-//在指定位置显示一个字符,包括部分字符
-//x:0~127
-//y:0~63
-//mode:0,反白显示;1,正常显示
-//size:选择字体 12/16/24
-void LedMatrix_ShowChar(uint16_t x, uint16_t y, uint8_t chr, uint8_t size)
-{
-    uint8_t temp, t, t1;
-    uint8_t y0 = y;
-    uint8_t csize;
-    csize = (size / 8 + ((size % 8) ? 1 : 0)) * (size / 2); //得到字体一个字符对应点阵集所占的字节数
-    if (8 == size) {
-        csize = 6;
-    }
-    chr = chr - ' '; //得到偏移后的值
-    for (t = 0; t < csize; t++) {
-        if (size == 8) {
-            temp = asc2_0806[chr][t];    //调用0608字体
-        } else if (size == 12) {
-            temp = asc2_1206[chr][t];    //调用1206字体
-        } else if (size == 16) {
-            temp = asc2_1608[chr][t];    //调用1608字体
-        } else if (size == 24) {
-            temp = asc2_2412[chr][t];    //调用2412字体
-        } else {
-            return;    //没有的字库
-        }
-        for (t1 = 0; t1 < 8; t1++) {
-            if (temp & 0x80) {
-                LedMatrix_DrawPoint(x, y, POINT_COLOR);
-            } else {
-                LedMatrix_DrawPoint(x, y, BACK_COLOR);
-            }
-            temp <<= 1;
-            y++;
-            if ((y - y0) == size) {
-                y = y0;
-                x++;
-                break;
-            }
-        }
-    }
-}
-//m^n函数
-static uint32_t mypow(uint8_t m, uint8_t n)
-{
-    uint32_t result = 1;
-    while (n--) {
-        result *= m;
-    }
-    return result;
-}
-//显示2个数字
-//x,y :起点坐标
-//len :数字的位数
-//size:字体大小
-//mode:模式   0,填充模式;1,叠加模式
-//num:数值(0~4294967295);
-void LedMatrix_ShowNum(uint16_t x, uint16_t y, uint32_t num, uint8_t len, uint8_t size)
-{
-    uint16_t t, temp;
-    uint8_t enshow = 0;
-    uint16_t offset;
-
-    if (size == 8) {
-        offset = 5;
-    } else {
-        offset =  size / 2;
-    }
-    for (t = 0; t < len; t++) {
-        temp = (num / mypow(10, len - t - 1)) % 10;
-        if (enshow == 0 && t < (len - 1)) {
-            if (temp == 0) {
-                LedMatrix_ShowChar(x + (offset * t), y, '0', size);
-                continue;
-            } else {
-                enshow = 1;
-            }
-
-        }
-        LedMatrix_ShowChar(x + (offset * t), y, temp + '0', size);
-        //x+=offset;
-    }
-}
-
-//显示字符串
-//x,y:起点坐标
-//size:字体大小
-//*p:字符串起始地址
-void LedMatrix_ShowString(uint16_t x, uint16_t y, const uint8_t *p, uint8_t size)
-{
-    while ((*p <= '~') && (*p >= ' ')) { //判断是不是非法字符!
-        //if(x>(128-(size/2))){x=0;y+=size;}
-        //if(y>(64-size)){y=x=0;OLED_Clear();}
-        LedMatrix_ShowChar(x, y, *p, size);
-        if (8 == size) {
-            x += 6;
-        } else {
-            x += size / 2;
-        }
-        p++;
-    }
-}
-
-
-/***********功能描述：显示显示BMP图片128×64起始点坐标(x,y),x的范围0～127，y为页的范围0～7*****************/
-void LedMatrix_DrawBMP(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, const uint8_t BMP[])
-{
-    unsigned char x, y;
-
-//  if(y1%8==0) y=y1/8;
-//  else y=y1/8+1;
     for (y = y0; y < y1; y++) {
         for (x = x0; x < x1; x++) {
-            //OLED_GRAM[x][y] = BMP[j++];
+            LedMatrix_DrawPoint(x, y, *BMP++);
         }
     }
 }
 
-//画线
-//x1,y1:起点坐标
-//x2,y2:终点坐标
-void LedMatrix_DrawLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
-{
-    uint16_t t;
-    int xerr = 0, yerr = 0, delta_x, delta_y, distance;
-    int incx, incy, uRow, uCol;
-    delta_x = x2 - x1; //计算坐标增量
-    delta_y = y2 - y1;
-    uRow = x1;
-    uCol = y1;
-    if (delta_x > 0) {
-        incx = 1;    //设置单步方向
-    } else if (delta_x == 0) {
-        incx = 0;    //垂直线
-    } else {
-        incx = -1;
-        delta_x = -delta_x;
-    }
-    if (delta_y > 0) {
-        incy = 1;
-    } else if (delta_y == 0) {
-        incy = 0;    //水平线
-    } else {
-        incy = -1;
-        delta_y = -delta_y;
-    }
-    if ( delta_x > delta_y) {
-        distance = delta_x;    //选取基本增量坐标轴
-    } else {
-        distance = delta_y;
-    }
-    for (t = 0; t <= distance + 1; t++ ) { //画线输出
-        LedMatrix_DrawPoint(uRow, uCol, POINT_COLOR); //画点
-        xerr += delta_x ;
-        yerr += delta_y ;
-        if (xerr > distance) {
-            xerr -= distance;
-            uRow += incx;
-        }
-        if (yerr > distance) {
-            yerr -= distance;
-            uCol += incy;
-        }
-    }
-}
-
-//画矩形
-//(x1,y1),(x2,y2):矩形的对角坐标
-void LedMatrix_DrawRectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
-{
-    LedMatrix_DrawLine(x1, y1, x2, y1);
-    LedMatrix_DrawLine(x1, y1, x1, y2);
-    LedMatrix_DrawLine(x1, y2, x2, y2);
-    LedMatrix_DrawLine(x2, y1, x2, y2);
-}
 
 //在指定位置画一个指定大小的圆
 //(x,y):中心点
 //r    :半径
-void LedMatrix_Draw_Circle(uint16_t x0, uint16_t y0, uint16_t r)
-{
-    int a, b;
-    int di;
-    a = 0; b = r;
-    di = 3 - (r << 1);       //判断下个点位置的标志
-    while (a <= b) {
-        LedMatrix_DrawPoint(x0 + a, y0 - b, POINT_COLOR);       //5
-        LedMatrix_DrawPoint(x0 + b, y0 - a, POINT_COLOR);       //0
-        LedMatrix_DrawPoint(x0 + b, y0 + a, POINT_COLOR);       //4
-        LedMatrix_DrawPoint(x0 + a, y0 + b, POINT_COLOR);       //6
-        LedMatrix_DrawPoint(x0 - a, y0 + b, POINT_COLOR);       //1
-        LedMatrix_DrawPoint(x0 - b, y0 + a, POINT_COLOR);
-        LedMatrix_DrawPoint(x0 - a, y0 - b, POINT_COLOR);       //2
-        LedMatrix_DrawPoint(x0 - b, y0 - a, POINT_COLOR);       //7
-        a++;
-        //使用Bresenham算法画圆
-        if (di < 0) {
-            di += 4 * a + 6;
-        } else {
-            di += 10 + 4 * (a - b);
-            b--;
-        }
-    }
-}
+// void LedMatrix_Draw_Circle(uint16_t x0, uint16_t y0, uint16_t r)
+// {
+//     int a, b;
+//     int di;
+//     a = 0; b = r;
+//     di = 3 - (r << 1);       //判断下个点位置的标志
+//     while (a <= b) {
+//         LedMatrix_DrawPoint(x0 + a, y0 - b, POINT_COLOR);       //5
+//         LedMatrix_DrawPoint(x0 + b, y0 - a, POINT_COLOR);       //0
+//         LedMatrix_DrawPoint(x0 + b, y0 + a, POINT_COLOR);       //4
+//         LedMatrix_DrawPoint(x0 + a, y0 + b, POINT_COLOR);       //6
+//         LedMatrix_DrawPoint(x0 - a, y0 + b, POINT_COLOR);       //1
+//         LedMatrix_DrawPoint(x0 - b, y0 + a, POINT_COLOR);
+//         LedMatrix_DrawPoint(x0 - a, y0 - b, POINT_COLOR);       //2
+//         LedMatrix_DrawPoint(x0 - b, y0 - a, POINT_COLOR);       //7
+//         a++;
+//         //使用Bresenham算法画圆
+//         if (di < 0) {
+//             di += 4 * a + 6;
+//         } else {
+//             di += 10 + 4 * (a - b);
+//             b--;
+//         }
+//     }
+// }
 
 

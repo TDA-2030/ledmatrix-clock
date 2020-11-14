@@ -9,7 +9,7 @@
 #include <sys/time.h>
 #include <string.h>
 
-#include "sht20.h"
+#include "shtcx.h"
 #include "led_matrix.h"
 #include "captive_portal.h"
 #include "file_manage.h"
@@ -19,6 +19,7 @@
 #include "app_main.h"
 #include "calendar.h"
 #include "mp3_player.h"
+#include "lcd_paint.h"
 
 static const char *TAG = "app_main";
 
@@ -66,17 +67,17 @@ void Display_task(void *pvParameter)
     while (1) {
 
         calendar_t *cdr = get_calendar_time();
-        LedMatrix_Set_point_color(COLOR_GREEN);
+        iot_paint_Set_point_color(COLOR_GREEN);
         //if (time_last != 0)
         {
 
-            LedMatrix_ShowNum(x, y, cdr->hour, 2, 16);
-            LedMatrix_Fill(x + 17, y + 4, x + 18, y + 5, LedMatrix_Get_point_color());
-            LedMatrix_Fill(x + 17, y + 10, x + 18, y + 11, LedMatrix_Get_point_color());
-            LedMatrix_ShowNum(x + 20, y, cdr->min, 2, 16);
-            LedMatrix_Fill(x + 37, y + 4, x + 38, y + 5, LedMatrix_Get_point_color());
-            LedMatrix_Fill(x + 37, y + 10, x + 38, y + 11, LedMatrix_Get_point_color());
-            LedMatrix_ShowNum(x + 40, y, cdr->sec, 2, 16);
+            iot_paint_draw_num(x, y, cdr->hour, 2, &Font12);
+            // LedMatrix_Fill(x + 17, y + 4, x + 18, y + 5, LedMatrix_Get_point_color());
+            // LedMatrix_Fill(x + 17, y + 10, x + 18, y + 11, LedMatrix_Get_point_color());
+            iot_paint_draw_num(x + 20, y, cdr->min, 2, &Font12);
+            // LedMatrix_Fill(x + 37, y + 4, x + 38, y + 5, LedMatrix_Get_point_color());
+            // LedMatrix_Fill(x + 37, y + 10, x + 38, y + 11, LedMatrix_Get_point_color());
+            iot_paint_draw_num(x + 40, y, cdr->sec, 2, &Font12);
 
             // LedMatrix_ShowNum(0, 16, sht20Info.humidity * 100, 4, 12);
             // LedMatrix_ShowNum(33, 16, sht20Info.tempreture * 100, 4, 12);
@@ -103,6 +104,9 @@ void net_handle_task(void *pvParameter)
 
     char str[128];
 
+    sht3cx_init();
+
+
     while (1) {
         calendar_t *cdr = get_calendar_time();
         memset(str, 0, sizeof(str));
@@ -111,6 +115,11 @@ void net_handle_task(void *pvParameter)
 
         // weather_get("jian", WEATHER_TYPE_DAY);
         // weather_get("jian", WEATHER_TYPE_NOW);
+
+        float temperature, humidity;
+        sht3cx_get_data(&humidity, &temperature);
+        ESP_LOGI(TAG, "h:%2.f, t:%.2f", humidity, temperature);
+
         vTaskDelay(1500 / portTICK_PERIOD_MS);
     }
 }
@@ -124,9 +133,18 @@ void app_main()
     }
     ESP_ERROR_CHECK(ret);
 
+    ESP_ERROR_CHECK(fm_init()); /* Initialize file storage */
+
     LedMatrix_init();
+
+    lcd_driver_fun_t lcd_drv = {
+        .draw_pixel = LedMatrix_DrawPoint,
+        .draw_bitmap = LedMatrix_DrawBMP,
+    };
+    iot_paint_init(&lcd_drv);
     vTaskDelay(500 / portTICK_PERIOD_MS);
     LedMatrix_SetLight(100);
+    app_show_text_str(0, 0, 64, 32, "测试时钟", 16, 0);
 
     bool is_configured;
     captive_portal_start("ESP_WEB_CONFIG", NULL, &is_configured);
@@ -147,7 +165,7 @@ void app_main()
     }
 
     sntp_start();
-    ESP_ERROR_CHECK(fm_init()); /* Initialize file storage */
+    
     start_file_server();
 
     xTaskCreate(&Display_task, "Display_task", 1024 * 2, NULL, 6, NULL);

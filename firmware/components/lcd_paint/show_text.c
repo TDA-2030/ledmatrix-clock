@@ -9,10 +9,12 @@
 #include "esp_log.h"
 
 #include "file_manage.h"
+#include "lcd_paint.h"
 #include "cc936.h"
 
 static const char *TAG = "text show";
 
+extern lcd_driver_fun_t g_lcd;
 
 #define FONT_GBK 1
 
@@ -244,10 +246,10 @@ esp_err_t app_show_gbk_char(uint16_t x, uint16_t y, const char *gbk, uint8_t siz
         for (t1 = 0; t1 < 8; t1++)
         {
             if (temp & 0x80){
-                // Paint_DrawPixel(x, y, 0);
+                g_lcd.draw_pixel(x, y, iot_paint_Get_point_color());
             }
             else if (mode == 0){
-                // Paint_DrawPixel(x, y, 1);
+                g_lcd.draw_pixel(x, y, iot_paint_Get_back_color());
             }
             temp <<= 1;
             x++;
@@ -309,17 +311,10 @@ esp_err_t app_show_text_str(uint16_t x, uint16_t y, uint16_t width, uint16_t hei
                 x=x0;
             }  
             else {
-                
-                // Paint_DrawCharAt((int)x, (int)y, gbk[1], &Font16, COLORED);printf("%c", gbk[1]);
+                iot_paint_draw_char(x, y, gbk[1], &Font16);
             }
             x+=size/2; //字符,为全字的一半 
         }
     }
-    return ESP_OK;
-}
-
-esp_err_t app_show_text_init(void)
-{
-
     return ESP_OK;
 }

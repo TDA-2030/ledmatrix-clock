@@ -86,15 +86,15 @@ void Display_task(void *pvParameter)
         }
         vTaskDelay(200 / portTICK_PERIOD_MS);
 
-        if (0 == dir) {
-            if (++y > 16) {
-                dir = 1;
-            }
-        } else {
-            if (--y < 1) {
-                dir = 0;
-            }
-        }
+        // if (0 == dir) {
+        //     if (++y > 16) {
+        //         dir = 1;
+        //     }
+        // } else {
+        //     if (--y < 1) {
+        //         dir = 0;
+        //     }
+        // }
 
     }
 }
@@ -112,7 +112,7 @@ void net_handle_task(void *pvParameter)
         memset(str, 0, sizeof(str));
         calendar_get_lunar_str(cdr, str); printf("农历: %s\n", str);
         calendar_get_jieqi_str(cdr, str); printf("节气: %s\n", str);
-
+        
         // weather_get("jian", WEATHER_TYPE_DAY);
         // weather_get("jian", WEATHER_TYPE_NOW);
 
@@ -144,7 +144,15 @@ void app_main()
     iot_paint_init(&lcd_drv);
     vTaskDelay(500 / portTICK_PERIOD_MS);
     LedMatrix_SetLight(100);
-    app_show_text_str(0, 0, 64, 32, "测试时钟", 16, 0);
+    iot_paint_draw_string(0, 0, "余海茗-", &Font16_gbk);
+    
+    iot_paint_draw_gbk_char_offset(18, 16, 0, 16, "与", &Font16_gbk);
+    for (size_t i = 0; i < 12; i++)
+    {
+        iot_paint_draw_gbk_char_offset(0, 16, i, 4, "与", &Font16_gbk);
+        vTaskDelay(200 / portTICK_PERIOD_MS);
+    }
+    
 
     bool is_configured;
     captive_portal_start("ESP_WEB_CONFIG", NULL, &is_configured);

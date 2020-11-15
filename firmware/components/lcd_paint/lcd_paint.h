@@ -61,6 +61,9 @@ void iot_paint_Set_back_color(uint16_t color);
 
 uint16_t iot_paint_Get_back_color(void);
 
+void iot_paint_draw_gbk_char_offset(int x, int y, uint8_t offset, uint8_t width, const char *text_char, const sFONT *font);
+void iot_paint_draw_gbk_char(int x, int y, const char *text_char, const sFONT *font);
+
 /**
  * @brief Draw a character on screen
  * 

@@ -44,7 +44,7 @@
 #include <stdint.h>
 
 typedef struct {
-  const uint8_t *table;
+  int (*get_fontdata)(const char *code, uint8_t *out_data, uint16_t *out_length);
   uint16_t Width;
   uint16_t Height;
 }sFONT;
@@ -54,6 +54,7 @@ extern sFONT Font20;
 extern sFONT Font16;
 extern sFONT Font12;
 extern sFONT Font8;
+extern sFONT Font16_gbk;
 
 #endif /* __IOT_FONTS_H */
  

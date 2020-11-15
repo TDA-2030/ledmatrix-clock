@@ -20,6 +20,8 @@
 #include "freertos/semphr.h"
 
 #include "lcd_paint.h"
+#include "show_text.h"
+#include "cc936.h"
 
 static const char *TAG = "lcd paint";
 
@@ -73,21 +75,67 @@ uint16_t iot_paint_Get_back_color(void)
     return g_back_color;
 }
 
-void iot_paint_draw_char(int x, int y, char ascii_char, const sFONT *font)
+void iot_paint_draw_gbk_char_offset(int x, int y, uint8_t offset, uint8_t width, const char *text_char, const sFONT *font)
 {
-    LCD_PAINT_CHECK(ascii_char >= ' ', "ACSII code invalid");
     LCD_PAINT_CHECK(NULL != font, "Font pointer invalid");
     int i, j;
     int x0 = x;
-    ascii_char -= ' ';
-    uint16_t char_size = font->Height * (font->Width / 8 + (font->Width % 8 ? 1 : 0));
-    uint32_t char_offset = ascii_char * char_size;
-    const uint8_t *ptr = &font->table[char_offset];
+    uint16_t char_size = 0;
+    uint8_t ptr[72];
+    if (*text_char < 0x80 && font == &Font16_gbk) {
+        font = &Font16;
+        text_char++;
+        ESP_LOGW(TAG, "force to ascii");
+    }
+
+    int ret = font->get_fontdata(text_char, &ptr, &char_size);
+    if (0 != ret) {
+        ESP_LOGE(TAG, "get font data failed");
+    }
 
     for (j = 0; j < char_size; j++) {
         uint8_t temp = ptr[j];
         for (i = 0; i < 8; i++) {
-           if (temp & 0x80) {
+            if ((x - x0) >= offset && ((x - x0 - offset)<width)) {
+                if (temp & 0x80) {
+                    g_lcd.draw_pixel(x-offset, y, g_point_color);
+                } else {
+                    g_lcd.draw_pixel(x-offset, y, g_back_color);
+                }
+            }
+
+            temp <<= 1;
+            x++;
+            if ((x - x0) == font->Width) {
+                x = x0;
+                y++;
+                break;
+            }
+        }
+    }
+}
+
+void iot_paint_draw_gbk_char(int x, int y, const char *text_char, const sFONT *font)
+{
+    LCD_PAINT_CHECK(NULL != font, "Font pointer invalid");
+    int i, j;
+    int x0 = x;
+    uint16_t char_size = 0;
+    uint8_t ptr[72];
+    if (*text_char < 0x80 && font == &Font16_gbk) {
+        font = &Font16;
+        text_char++;
+    }
+
+    int ret = font->get_fontdata(text_char, &ptr, &char_size);
+    if (0 != ret) {
+        ESP_LOGE(TAG, "get font data failed");
+    }
+
+    for (j = 0; j < char_size; j++) {
+        uint8_t temp = ptr[j];
+        for (i = 0; i < 8; i++) {
+            if (temp & 0x80) {
                 g_lcd.draw_pixel(x, y, g_point_color);
             } else {
                 g_lcd.draw_pixel(x, y, g_back_color);
@@ -110,24 +158,32 @@ void iot_paint_draw_string(int x, int y, const char *text, const sFONT *font)
     const char *p_text = text;
     uint16_t x0 = x;
     uint16_t y0 = y;
-    // lcd_info_t info;
+
+    char gbk[2];
+    char unicode[2];
 
     while (*p_text != 0) {
-        // if (x > (x0 + info.width - font->Width)) { //换行
-        //     y += font->Height;
-        //     x = x0;
-        // }
-        // if (y > (y0 + info.height - font->Height)) {
-        //     break;
-        // }
-        if (*p_text == 13) { // '\n'
+        if (x > (x0 + 64 - font->Width)) { //换行
+            y += font->Height;
+            x = x0;
+        }
+        if (y > (y0 + 32 - font->Height)) {
+            break;
+            ESP_LOGW(TAG, "exceed area");
+        }
+
+        p_text = Utf8ToUnicode(p_text, unicode);
+        font_unicode2gbk(unicode, gbk);
+        char ascii = gbk[1];
+
+        if (ascii == '\n') {
             y += font->Height;
             x = x0;
         } else {
-            iot_paint_draw_char(x, y, *p_text, font);
+            iot_paint_draw_gbk_char(x, y, gbk, font);
+            x += font->Width;
         }
-        x += font->Width;
-        p_text++;
+
     }
 }
 
@@ -162,9 +218,9 @@ void iot_paint_draw_num(int x, int y, uint32_t num, uint8_t len, const sFONT *fo
 
     for (size_t i = 0; i < len; i++) {
         if (i < num_len) {
-            iot_paint_draw_char(x, y, buf[i], font);
+            iot_paint_draw_gbk_char(x, y, &buf[i], font);
         } else {
-            iot_paint_draw_char(x, y, '0', font);
+            // iot_paint_draw_gbk_char(x, y, '0', font);
         }
 
         x -= font->Width;
@@ -183,14 +239,14 @@ void iot_paint_draw_float(int x, int y, uint32_t num, uint8_t len, uint8_t point
 
     for (size_t i = 0; i < len; i++) {
         if (i == point) {
-            iot_paint_draw_char(x, y, '.', font);
+            // iot_paint_draw_gbk_char(x, y, '.', font);
             x -= font->Width;
         }
 
         if (i < num_len) {
-            iot_paint_draw_char(x, y, buf[i], font);
+            iot_paint_draw_gbk_char(x, y, &buf[i], font);
         } else {
-            iot_paint_draw_char(x, y, '0', font);
+            // iot_paint_draw_gbk_char(x, y, '0', font);
         }
 
         x -= font->Width;

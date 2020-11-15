@@ -42,7 +42,7 @@
 //  Font data for Courier New 12pt
 // 
 
-const uint8_t Font16_Table[] = 
+static const uint8_t Font16_Table[] = 
 {
 	// @0 ' ' (11 pixels wide)
 	0x00, 0x00, //            
@@ -1755,10 +1755,32 @@ const uint8_t Font16_Table[] =
 	0x00, 0x00, //            
 };
 
+#define WIDTH 11
+#define HEIGHT 16
+
+static int get_ascii_fontdata(const char *code, uint8_t *mat, uint16_t *len)
+{
+	if (*code > '~' || *code < ' ') {
+		return -1;
+	}
+
+    char ascii_char = *code - ' ';
+	uint16_t i;
+    uint16_t char_size = HEIGHT * (WIDTH / 8 + (WIDTH % 8 ? 1 : 0));
+    uint32_t char_offset = ascii_char * char_size;
+    const uint8_t *ptr = &Font16_Table[char_offset];
+
+    for (i = 0; i < char_size; i++) {
+        mat[i] = ptr[i];
+    }
+    *len = char_size;
+	return 0;
+}
+
 sFONT Font16 = {
-  Font16_Table,
-  11, /* Width */
-  16, /* Height */
+    .get_fontdata = get_ascii_fontdata,
+    .Width = WIDTH, /* Width */
+    .Height = HEIGHT, /* Height */
 };
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

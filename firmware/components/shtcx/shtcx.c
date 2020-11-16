@@ -84,7 +84,10 @@ SHTC3_Status_TypeDef wake(void)
 
 SHTC3_Status_TypeDef exitOp(SHTC3_Status_TypeDef status, const char *file, uint16_t line)
 {
-    SHTC3_exitOp_Callback(status, _inProcess, file, line);
+    if (status != SHTC3_Status_Nominal) {
+        ESP_LOGE(TAG, "%s:%d error", file, line);
+    }
+
     return status;
 }
 
@@ -152,9 +155,10 @@ SHTC3_Status_TypeDef sht3cx_checkID(void)
     uint8_t IDcrc;
     uint16_t ID;
     sht3cx_read(&ID, &IDcrc);
-    if (checkCRC(ID, IDcrc) == SHTC3_Status_Nominal) {
+    if (checkCRC(ID, IDcrc) != SHTC3_Status_Nominal) {
         ESP_LOGE(TAG, "checkCRC failed");
     }
+    ESP_LOGI(TAG, "sht3cx ID=%x", ID);
 
     if ((ID & 0b0000100000111111) != 0b0000100000000111) {       // Checking the form of the ID
         // Bits 11 and 5-0 must match
@@ -206,18 +210,22 @@ SHTC3_Status_TypeDef sht3cx_get_data(float *humi, float *temp)
     if (retval != SHTC3_Status_Nominal) {
         return exitOp(retval, __FILE__, __LINE__);
     }
-
+    delay_us(400);
+    _mode = SHTC3_CMD_CSE_RHF_LPM;
     retval = sht3cx_sendCommand(_mode); // Send the appropriate command - Note: incorrect commands are excluded by the 'setMode' command and _mode is a protected variable
     if (retval != SHTC3_Status_Nominal) {
         return exitOp(retval, __FILE__, __LINE__);
     }
-
+    delay_us(400);
     switch (_mode) { // Handle the two different ways of waiting for a measurement (polling or clock stretching)
     case SHTC3_CMD_CSE_RHF_NPM:
     case SHTC3_CMD_CSE_RHF_LPM:
     case SHTC3_CMD_CSE_TF_NPM:
     case SHTC3_CMD_CSE_TF_LPM:     // Address+read will yield an ACK and then clock stretching will occur
-        i2c_master_read_slave(g_i2c_bus, dat, 6);
+        if (0 != i2c_master_read_slave(g_i2c_bus, dat, 6)) {
+            exitOp(SHTC3_Status_Error, __FILE__, __LINE__);
+        }
+
         break;
 
     case SHTC3_CMD_CSD_RHF_NPM:
@@ -233,11 +241,11 @@ SHTC3_Status_TypeDef sht3cx_get_data(float *humi, float *temp)
     uint16_t RH = ((uint16_t)dat[0] << 8) | ((uint16_t)dat[1] << 0);
     uint16_t T = ((uint16_t)dat[3] << 8) | ((uint16_t)dat[4] << 0);
 
-    if (checkCRC(RH, dat[2]) == SHTC3_Status_Nominal) {
-        ESP_LOGE(TAG, "%d, check crc failed", __LINE__);
+    if (checkCRC(RH, dat[2]) != SHTC3_Status_Nominal) {
+        exitOp(SHTC3_Status_Error, __FILE__, __LINE__);
     }
-    if (checkCRC(T, dat[5]) == SHTC3_Status_Nominal) {
-        ESP_LOGE(TAG, "%d, check crc failed", __LINE__);
+    if (checkCRC(T, dat[5]) != SHTC3_Status_Nominal) {
+        exitOp(SHTC3_Status_Error, __FILE__, __LINE__);
     }
 
     *humi = SHTC3_raw2Percent(RH);

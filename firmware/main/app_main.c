@@ -104,20 +104,24 @@ void net_handle_task(void *pvParameter)
 
     char str[128];
 
-    sht3cx_init();
-
+    SHTC3_Init();
+    SHTC3_Wakeup();
+    SHTC3_SoftReset();
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    uint16_t id;
+    SHTC3_GetId(&id);ESP_LOGI(TAG, "SHTC3 ID=%x", id);
 
     while (1) {
         calendar_t *cdr = get_calendar_time();
         memset(str, 0, sizeof(str));
         calendar_get_lunar_str(cdr, str); printf("农历: %s\n", str);
         calendar_get_jieqi_str(cdr, str); printf("节气: %s\n", str);
-        
+
         // weather_get("jian", WEATHER_TYPE_DAY);
         // weather_get("jian", WEATHER_TYPE_NOW);
 
         float temperature, humidity;
-        sht3cx_get_data(&humidity, &temperature);
+        SHTC3_GetTempAndHumi(&temperature, &humidity);
         ESP_LOGI(TAG, "h:%2.f, t:%.2f", humidity, temperature);
 
         vTaskDelay(1500 / portTICK_PERIOD_MS);
@@ -145,14 +149,13 @@ void app_main()
     vTaskDelay(500 / portTICK_PERIOD_MS);
     LedMatrix_SetLight(100);
     iot_paint_draw_string(0, 0, "余海茗-", &Font16_gbk);
-    
+
     iot_paint_draw_gbk_char_offset(18, 16, 0, 16, "与", &Font16_gbk);
-    for (size_t i = 0; i < 12; i++)
-    {
+    for (size_t i = 0; i < 12; i++) {
         iot_paint_draw_gbk_char_offset(0, 16, i, 4, "与", &Font16_gbk);
         vTaskDelay(200 / portTICK_PERIOD_MS);
     }
-    
+
 
     bool is_configured;
     captive_portal_start("ESP_WEB_CONFIG", NULL, &is_configured);
@@ -173,7 +176,7 @@ void app_main()
     }
 
     sntp_start();
-    
+
     start_file_server();
 
     xTaskCreate(&Display_task, "Display_task", 1024 * 2, NULL, 6, NULL);

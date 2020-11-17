@@ -8,47 +8,71 @@ An Arduino library for the Sensirion SHTC3 humidity and temerature sensor
 #define SF_SHTC3
 
 #include "esp_log.h"
-#include "i2c_bus.h"
 
 
 #define SHTC3_ADDR_7BIT 0b1110000
 
-#define SHTC3_MAX_CLOCK_FREQ 1000000
+#define CRC_POLYNOMIAL  0x131 // P(x) = x^8 + x^5 + x^4 + 1 = 100110001
 
-typedef enum
-{
-    SHTC3_CMD_WAKE = 0x3517,
-    SHTC3_CMD_SLEEP = 0xB098,
-    SHTC3_CMD_SFT_RST = 0x805D,
-    SHTC3_CMD_READ_ID = 0xEFC8,
-} SHTC3_Commands_TypeDef;
+//==============================================================================
+void SHTC3_Init();
+//==============================================================================
+// Initializes the I2C bus for communication with the sensor.
+//------------------------------------------------------------------------------
 
-typedef enum
-{
-    SHTC3_CMD_CSE_RHF_NPM = 0x5C24, // Clock stretching, RH first, Normal power mode
-    SHTC3_CMD_CSE_RHF_LPM = 0x44DE, // Clock stretching, RH first, Low power mode
-    SHTC3_CMD_CSE_TF_NPM = 0x7CA2,	// Clock stretching, T first, Normal power mode
-    SHTC3_CMD_CSE_TF_LPM = 0x6458,	// Clock stretching, T first, Low power mode
+//==============================================================================
+int SHTC3_GetId(uint16_t *id);
+//==============================================================================
+// Gets the ID from the sensor.
+//------------------------------------------------------------------------------
+// input:  *id          pointer to a integer, where the id will be stored
+//
+// return: error:       ACK_ERROR      = no acknowledgment from sensor
+//                      CHECKSUM_ERROR = checksum mismatch
+//                      NO_ERROR       = no error
 
-    SHTC3_CMD_CSD_RHF_NPM = 0x58E0, // Polling, RH first, Normal power mode
-    SHTC3_CMD_CSD_RHF_LPM = 0x401A, // Polling, RH first, Low power mode
-    SHTC3_CMD_CSD_TF_NPM = 0x7866,	// Polling, T first, Normal power mode
-    SHTC3_CMD_CSD_TF_LPM = 0x609C	// Polling, T first, Low power mode
-} SHTC3_MeasurementModes_TypeDef;
+//==============================================================================
+int SHTC3_GetTempAndHumi(float *temp, float *humi);
+//==============================================================================
+// Gets the temperature [°C] and the humidity [%RH].
+//------------------------------------------------------------------------------
+// input:  *temp        pointer to a floating point value, where the calculated
+//                      temperature will be stored
+//         *humi        pointer to a floating point value, where the calculated
+//                      humidity will be stored
+//
+// return: error:       ACK_ERROR      = no acknowledgment from sensor
+//                      CHECKSUM_ERROR = checksum mismatch
+//                      NO_ERROR       = no error
+//
+// remark: If you use this function, then the sensor blocks the I2C-bus with
+//         clock stretching during the measurement.
 
-typedef enum
-{
-    SHTC3_Status_Nominal = 0, // The one and only "all is good" return value
-    SHTC3_Status_Error,		  // The most general of error values - can mean anything depending on the context
-    SHTC3_Status_CRC_Fail,	  // This return value means the computed checksum did not match the provided value
-    SHTC3_Status_ID_Fail	  // This status means that the ID of the device did not match the format for SHTC3
-} SHTC3_Status_TypeDef;
+//==============================================================================
+int SHTC3_GetTempAndHumiPolling(float *temp, float *humi);
+//==============================================================================
+// Gets the temperature [°C] and the humidity [%RH]. This function polls every
+// 1ms until measurement is ready.
+//------------------------------------------------------------------------------
+// input:  *temp        pointer to a floating point value, where the calculated
+//                      temperature will be stored
+//         *humi        pointer to a floating point value, where the calculated
+//                      humidity will be stored
+//
+// return: error:       ACK_ERROR      = no acknowledgment from sensor
+//                      CHECKSUM_ERROR = checksum mismatch
+//                      NO_ERROR       = no error
 
+int SHTC3_Sleep(void);
+int SHTC3_Wakeup(void);
 
-
-SHTC3_Status_TypeDef sht3cx_init(void);
-SHTC3_Status_TypeDef sht3cx_checkID(void);
-SHTC3_Status_TypeDef sht3cx_get_data(float *humi, float *temp);
-
+//==============================================================================
+int SHTC3_SoftReset(void);
+//==============================================================================
+// Calls the soft reset mechanism that forces the sensor into a well-defined
+// state without removing the power supply.
+//------------------------------------------------------------------------------
+// return: error:       ACK_ERROR      = no acknowledgment from sensor
+//                      NO_ERROR       = no error
 
 #endif /* SF_SHTC3 */

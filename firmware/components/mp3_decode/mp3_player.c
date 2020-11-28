@@ -25,7 +25,6 @@
 #include "esp_log.h"
 #include "mp3dec.h"
 #include "pwm_audio.h"
-#include "dac_audio.h"
 #include "driver/gpio.h"
 
 

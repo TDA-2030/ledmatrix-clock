@@ -12,10 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef __MP3_DECODER_HELIX_H__
+#define __MP3_DECODER_HELIX_H__
+
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 esp_err_t mp3_player_start(const char *path);
 
@@ -27,3 +34,9 @@ esp_err_t mp3_player_set_volume(int8_t volume);
 
 esp_err_t mp3_player_init(void);
 esp_err_t mp3_player_deinit(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

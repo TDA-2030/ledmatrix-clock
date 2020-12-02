@@ -9,6 +9,7 @@
 #include "esp_log.h"
 
 #include "file_manage.h"
+#include "show_text.h"
 
 static const char *TAG = "text show";
 
@@ -112,3 +113,23 @@ char *Utf8ToUnicode(const char *pInput, char *pOutput)
 }
 
 
+uint16_t utf8_to_gbk_strlen(const char *str)
+{
+    uint16_t len = 0;
+    char unicode[2];
+    while (*str != 0) {
+        str = Utf8ToUnicode(str, unicode);
+        len += 2;
+    }
+    return len;
+}
+
+void utf8_to_gbk_str(const char *str, char *out)
+{
+    char unicode[2];
+    while (*str != 0) {
+        str = Utf8ToUnicode(str, unicode);
+        font_unicode2gbk(unicode, out);
+        out += 2;
+    }
+}

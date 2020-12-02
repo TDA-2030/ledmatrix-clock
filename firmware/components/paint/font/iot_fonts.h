@@ -47,14 +47,16 @@ typedef struct {
   int (*get_fontdata)(const char *code, uint8_t *out_data, uint16_t *out_length);
   uint16_t Width;
   uint16_t Height;
+  uint16_t data_size;
 }sFONT;
 
-extern sFONT Font24;
-extern sFONT Font20;
-extern sFONT Font16;
-extern sFONT Font12;
-extern sFONT Font8;
-extern sFONT Font16_gbk;
+extern const sFONT Font24;
+extern const sFONT Font20;
+extern const sFONT Font16;
+extern const sFONT Font12;
+extern const sFONT Font8;
+extern const sFONT Font16_gbk;
+extern const sFONT Font16_num;
 
 #endif /* __IOT_FONTS_H */
  

@@ -2532,10 +2532,11 @@ static int get_ascii_fontdata(const char *code, uint8_t *mat, uint16_t *len)
 	return 0;
 }
 
-sFONT Font24 = {
+const sFONT Font24 = {
     .get_fontdata = get_ascii_fontdata,
     .Width = WIDTH, /* Width */
     .Height = HEIGHT, /* Height */
+	.data_size = HEIGHT * (WIDTH / 8 + (WIDTH % 8 ? 1 : 0)),
 };
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -62,40 +62,26 @@ calendar_t *get_calendar_time(void)
 void Display_task(void *pvParameter)
 {
     LedMatrix_Clear();
+    iot_paint_Set_point_color(COLOR_GREEN);
 
-    uint8_t dir = 0, x = 0, y = 0;
+    uint8_t times = 0, x = 4, y = 0;
+    paint_roll_text_create(2, 16, 60);
+    paint_roll_text_set_string("请你为我再将双手舞动，我会知道你在那个角落，看人生匆匆，愿我们同享光荣，愿我们的梦永不落空", &Font16_gbk);
+
+    LedMatrix_Fill(x + 17, y + 4, x + 18, y + 5, iot_paint_Get_point_color());
+    LedMatrix_Fill(x + 17, y + 10, x + 18, y + 11, iot_paint_Get_point_color());
+    LedMatrix_Fill(x + 37, y + 4, x + 38, y + 5, iot_paint_Get_point_color());
+    LedMatrix_Fill(x + 37, y + 10, x + 38, y + 11, iot_paint_Get_point_color());
+    calendar_t *cdr = get_calendar_time();
     while (1) {
-
-        calendar_t *cdr = get_calendar_time();
-        iot_paint_Set_point_color(COLOR_GREEN);
-        //if (time_last != 0)
-        {
-
-            iot_paint_draw_num(x, y, cdr->hour, 2, &Font12);
-            // LedMatrix_Fill(x + 17, y + 4, x + 18, y + 5, LedMatrix_Get_point_color());
-            // LedMatrix_Fill(x + 17, y + 10, x + 18, y + 11, LedMatrix_Get_point_color());
-            iot_paint_draw_num(x + 20, y, cdr->min, 2, &Font12);
-            // LedMatrix_Fill(x + 37, y + 4, x + 38, y + 5, LedMatrix_Get_point_color());
-            // LedMatrix_Fill(x + 37, y + 10, x + 38, y + 11, LedMatrix_Get_point_color());
-            iot_paint_draw_num(x + 40, y, cdr->sec, 2, &Font12);
-
-            // LedMatrix_ShowNum(0, 16, sht20Info.humidity * 100, 4, 12);
-            // LedMatrix_ShowNum(33, 16, sht20Info.tempreture * 100, 4, 12);
-
-            LedMatrix_SetLight(get_right_brightness(cdr->hour));
+        if (++times > 33) {
+            times = 0;
+            cdr = get_calendar_time();
+            // LedMatrix_SetLight(get_right_brightness(cdr->hour));
         }
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-
-        // if (0 == dir) {
-        //     if (++y > 16) {
-        //         dir = 1;
-        //     }
-        // } else {
-        //     if (--y < 1) {
-        //         dir = 0;
-        //     }
-        // }
-
+        paint_show_clock(x, y, cdr->hour, cdr->min, cdr->sec);
+        vTaskDelay(30 / portTICK_PERIOD_MS);
+        paint_roll_text_handler();
     }
 }
 

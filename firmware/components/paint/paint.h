@@ -61,18 +61,26 @@ void iot_paint_Set_back_color(uint16_t color);
 
 uint16_t iot_paint_Get_back_color(void);
 
-void iot_paint_draw_gbk_char_offset(int x, int y, uint8_t offset, uint8_t width, const char *text_char, const sFONT *font);
 void iot_paint_draw_gbk_char(int x, int y, const char *text_char, const sFONT *font);
+
+void paint_roll_text_create(int x, int y, int width);
+void paint_roll_text_set_string(const char *str, const sFONT *font);
+void paint_roll_text_handler(void);
+void paint_roll_text_delete(void);
+
+void paint_show_clock(uint16_t x, uint16_t y, uint8_t hour, uint8_t min, uint8_t sec);
+
+
 
 /**
  * @brief Draw a character on screen
  * 
  * @param x Starting point in X direction
  * @param y Starting point in Y direction
- * @param ascii_char ASCII characters to display
+ * @param text_char characters to display
  * @param font Pointer to a font
  */
-void iot_paint_draw_char(int x, int y, char ascii_char, const sFONT* font);
+void iot_paint_draw_char(int x, int y, const char *text_char, const sFONT *font);
 
 /**
  * @brief Draw a string on screen

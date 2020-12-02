@@ -239,7 +239,7 @@ void LedMatrix_init(void)
     gpio_config(&io_conf);
 
     LedMatrix_Clear();
-    hw_tg0_timer_init(TIMER_1, true, 0.001f, timer_group0_isr);
+    hw_tg0_timer_init(TIMER_1, true, 0.0005f, timer_group0_isr);
     OE_LOW;
 
     ledc_init();
@@ -310,8 +310,8 @@ void LedMatrix_Fill(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t
 void LedMatrix_DrawBMP(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, const uint8_t *BMP)
 {
     uint16_t x, y;
-    uint16_t x1 = x0 + width - 1;
-    uint16_t y1 = y0 + height - 1;
+    uint16_t x1 = x0 + width ;
+    uint16_t y1 = y0 + height ;
 
     for (y = y0; y < y1; y++) {
         for (x = x0; x < x1; x++) {

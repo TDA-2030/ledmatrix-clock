@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <string.h>
 
+#include "board.h"
 #include "shtcx.h"
 #include "led_matrix.h"
 #include "captive_portal.h"
@@ -19,7 +20,8 @@
 #include "app_main.h"
 #include "calendar.h"
 #include "mp3_player.h"
-#include "lcd_paint.h"
+#include "paint.h"
+#include "app_bt_audio.h"
 
 static const char *TAG = "app_main";
 
@@ -89,16 +91,15 @@ void net_handle_task(void *pvParameter)
 {
 
     char str[128];
-
     sht3cx_init();
 
 
     while (1) {
         calendar_t *cdr = get_calendar_time();
         memset(str, 0, sizeof(str));
-        calendar_get_lunar_str(cdr, str); printf("农历: %s\n", str);
-        calendar_get_jieqi_str(cdr, str); printf("节气: %s\n", str);
-        
+        calendar_get_lunar_str(cdr, str);
+        calendar_get_jieqi_str(cdr, str);
+
         // weather_get("jian", WEATHER_TYPE_DAY);
         // weather_get("jian", WEATHER_TYPE_NOW);
 
@@ -106,7 +107,10 @@ void net_handle_task(void *pvParameter)
         sht3cx_get_data(&humidity, &temperature);
         ESP_LOGI(TAG, "h:%2.f, t:%.2f", humidity, temperature);
 
-        vTaskDelay(1500 / portTICK_PERIOD_MS);
+
+
+
+        vTaskDelay(15000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -119,9 +123,9 @@ void app_main()
     }
     ESP_ERROR_CHECK(ret);
 
-    ESP_ERROR_CHECK(fm_init()); /* Initialize file storage */
-
+    board_init();
     LedMatrix_init();
+    ESP_ERROR_CHECK(fm_init()); /* Initialize file storage */
 
     lcd_driver_fun_t lcd_drv = {
         .draw_pixel = LedMatrix_DrawPoint,
@@ -129,16 +133,10 @@ void app_main()
     };
     iot_paint_init(&lcd_drv);
     vTaskDelay(500 / portTICK_PERIOD_MS);
-    LedMatrix_SetLight(100);
-    iot_paint_draw_string(0, 0, "余海茗-", &Font16_gbk);
-    
-    iot_paint_draw_gbk_char_offset(18, 16, 0, 16, "与", &Font16_gbk);
-    for (size_t i = 0; i < 12; i++)
-    {
-        iot_paint_draw_gbk_char_offset(0, 16, i, 4, "与", &Font16_gbk);
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-    }
-    
+    LedMatrix_SetLight(10);
+    xTaskCreate(&Display_task, "Display_task", 1024 * 2, NULL, 6, NULL);
+
+    vTaskDelay(500 / portTICK_PERIOD_MS);
 
     bool is_configured;
     captive_portal_start("ESP_WEB_CONFIG", NULL, &is_configured);
@@ -159,13 +157,15 @@ void app_main()
     }
 
     sntp_start();
-    
+
     start_file_server();
 
-    xTaskCreate(&Display_task, "Display_task", 1024 * 2, NULL, 6, NULL);
+
     xTaskCreate(&net_handle_task, "net_handle_task", 1024 * 6, NULL, 5, NULL);
 
     mp3_player_init();
-    mp3_player_start("/spiffs/01.mp3");
-    mp3_player_set_volume(-8);
+    // mp3_player_start("/spiffs/01.mp3");
+    mp3_player_set_volume(0);
+    esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+    app_bt_init();
 }

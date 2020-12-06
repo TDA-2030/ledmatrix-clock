@@ -30,8 +30,8 @@ extern "C" {
 #define COLOR_YELLOW 3
 
 typedef struct {
-    esp_err_t (*draw_pixel)(uint16_t x, uint16_t y, uint16_t color);                                     /*!<  */
-    esp_err_t (*draw_bitmap)(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t *bitmap);
+    void (*draw_pixel)(uint16_t x, uint16_t y, uint16_t color);                                     /*!<  */
+    void (*draw_bitmap)(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint8_t *bitmap);
 }lcd_driver_fun_t;
 
 /**
@@ -60,8 +60,6 @@ uint16_t iot_paint_Get_point_color(void);
 void iot_paint_Set_back_color(uint16_t color);
 
 uint16_t iot_paint_Get_back_color(void);
-
-void iot_paint_draw_gbk_char(int x, int y, const char *text_char, const sFONT *font);
 
 void paint_roll_text_create(int x, int y, int width);
 void paint_roll_text_set_string(const char *str, const sFONT *font);

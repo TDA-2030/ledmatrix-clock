@@ -57,6 +57,7 @@ extern const sFONT Font12;
 extern const sFONT Font8;
 extern const sFONT Font16_gbk;
 extern const sFONT Font16_num;
+extern const sFONT Font10_hz;
 
 #endif /* __IOT_FONTS_H */
  

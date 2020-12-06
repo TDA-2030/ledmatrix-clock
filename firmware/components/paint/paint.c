@@ -132,6 +132,7 @@ static roll_text_data_t *rtd;
 void paint_roll_text_create(int x, int y, int width)
 {
     LCD_PAINT_CHECK(0 != width, "Roll text area width invalid");
+    LCD_PAINT_CHECK(NULL == rtd, "Roll text area aleady create");
 
     rtd = malloc(sizeof(roll_text_data_t));
     if (NULL == rtd) {
@@ -156,6 +157,7 @@ void paint_roll_text_set_string(const char *str, const sFONT *font)
     rtd->buf_width = s_len * font->Width;
     rtd->buf_height = font->Height;
     rtd->x_offset = 0;
+    rtd->font = font;
 
     ESP_LOGI(TAG, "str len = %d", s_len);
     if (rtd->buf) {
@@ -215,8 +217,11 @@ void paint_roll_text_handler(void)
 void paint_roll_text_delete(void)
 {
     if (rtd != NULL) {
+        memset(rtd->buf, 0, (rtd->width) * (rtd->font->Height));
+        g_lcd.draw_bitmap(rtd->x, rtd->y, rtd->width, rtd->font->Height, rtd->buf);
         free(rtd->buf);
         free(rtd);
+        rtd = NULL;
     }
 }
 
@@ -228,6 +233,10 @@ static void draw_num_yoffset(int16_t x, int16_t y, int16_t y_offet, uint8_t num,
     int16_t y1 = y0 + font->Height - 1;
     uint16_t char_size = 0;
     uint8_t ptr[48];
+    if (num > 9) {
+        num = 0;
+    }
+
     char text_char = num + '0';
 
     int ret = font->get_fontdata((const char *)&text_char, ptr, &char_size);
@@ -262,8 +271,8 @@ static void draw_num_yoffset(int16_t x, int16_t y, int16_t y_offet, uint8_t num,
 //===============================================================
 void paint_show_clock(uint16_t x, uint16_t y, uint8_t hour, uint8_t min, uint8_t sec)
 {
-    static uint8_t last_hour = 3, last_min = 3, last_sec = 3;
-    static uint8_t last_hour_l = 3, last_min_l = 3, last_sec_l = 3;
+    static uint8_t last_hour = 10, last_min = 10, last_sec = 10;
+    static uint8_t last_hour_l = 10, last_min_l = 10, last_sec_l = 10;
 
     static int16_t y_hour = -16, y_min = -16, y_sec = -16;
     static int16_t y_hour_l = -16, y_min_l = -16, y_sec_l = -16;
@@ -351,8 +360,7 @@ void iot_paint_draw_char(int x, int y, const char *text_char, const sFONT *font)
     int x0 = x;
     uint16_t char_size = 0;
     uint8_t ptr[72];
-    if (*text_char < 0x80 && font == &Font16_gbk) {
-        font = &Font16;
+    if (*text_char < 0x80) {
         text_char++;
     }
 
@@ -392,11 +400,11 @@ void iot_paint_draw_string(int x, int y, const char *text, const sFONT *font)
     char unicode[2];
 
     while (*p_text != 0) {
-        if (x > (x0 + 64 - font->Width)) { //换行
+        if (x > (x0 + LED_MATRIX_MAX_WIDTH - font->Width)) { //换行
             y += font->Height;
             x = x0;
         }
-        if (y > (y0 + 32 - font->Height)) {
+        if (y > (y0 + LED_MATRIX_MAX_HEIGHT - font->Height)) {
             break;
             ESP_LOGW(TAG, "exceed area");
         }

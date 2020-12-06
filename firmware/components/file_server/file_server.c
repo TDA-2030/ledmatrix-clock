@@ -17,6 +17,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
+#include "mdns.h"
 #include "esp_vfs.h"
 #include "esp_spiffs.h"
 #include "esp_http_server.h"
@@ -432,6 +433,55 @@ static esp_err_t delete_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static bool g_notice_mdns_init_flag = 0;
+static esp_err_t mdns_start(void)
+{
+    const char *HOSTNAME = "clock-home";
+    const int PORT = 80;
+
+    if (g_notice_mdns_init_flag) {
+        return ESP_OK;
+    }
+
+    mdns_txt_item_t serviceTxtData[] = {
+        {"board", "esp32"},
+        {"path", "/"}
+    };
+
+    esp_err_t ret = ESP_OK;
+    /**< configure mdns */
+    ESP_ERROR_CHECK(mdns_init());
+    ESP_ERROR_CHECK(mdns_hostname_set(HOSTNAME));
+    ESP_ERROR_CHECK(mdns_instance_name_set("esp clock home"));
+
+    ret = mdns_service_add("Local Control Service",
+                           "_http",    /**< service name */
+                           "_tcp",     /**< protocol */
+                           PORT,  /**< port */
+                           serviceTxtData,
+                           sizeof(serviceTxtData) / sizeof(serviceTxtData[0]));
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "mdns service add failed");
+    }
+
+    ESP_LOGI(TAG, "mdns service add, hostname:%s, port:%d", HOSTNAME, PORT);
+
+    g_notice_mdns_init_flag = true;
+
+    return ESP_OK;
+}
+
+static void mdns_stop(void)
+{
+    if (!g_notice_mdns_init_flag) {
+        return ;
+    }
+
+    mdns_free();
+    g_notice_mdns_init_flag = false;
+}
+
 /* Function to start the file server */
 esp_err_t start_file_server(void)
 {
@@ -448,6 +498,7 @@ esp_err_t start_file_server(void)
         return ESP_ERR_INVALID_STATE;
     }
 
+    mdns_start();
     /* Allocate memory for server data */
     server_data = calloc(1, sizeof(struct file_server_data));
     if (!server_data) {

@@ -1,4 +1,4 @@
-
+#include "math.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -199,7 +199,7 @@ static ledc_channel_config_t ledc_channel = {
 static void ledc_init(void)
 {
     ledc_timer_config_t ledc_timer = {
-        .duty_resolution = LEDC_TIMER_10_BIT, // resolution of PWM duty
+        .duty_resolution = LEDC_TIMER_12_BIT, // resolution of PWM duty
         .freq_hz = 5000,                      // frequency of PWM signal
         .speed_mode = LEDC_HIGH_SPEED_MODE,           // timer mode
         .timer_num = LEDC_TIMER_0,            // timer index
@@ -213,11 +213,16 @@ static void ledc_init(void)
 
 void LedMatrix_SetLight(uint32_t val)
 {
-    if (val > 100) {
-        val = 100;
+    float set;
+    float input= (float)val / 4095.0f;
+    set = powf(input, 2);
+    val = (uint32_t)(set * 4095.0f);
+
+    if (val > 4095) {
+        val = 4095;
     }
-    val = 100 - val;
-    ledc_set_duty(ledc_channel.speed_mode, ledc_channel.channel, val * 1024 / 100);
+    val = 4095 - val;
+    ledc_set_duty(ledc_channel.speed_mode, ledc_channel.channel, val);
     ledc_update_duty(ledc_channel.speed_mode, ledc_channel.channel);
 }
 
@@ -245,7 +250,7 @@ void LedMatrix_init(void)
     ledc_init();
     LedMatrix_SetLight(20);
 
-    LedMatrix_Fill(0, 0, 63, 31, COLOR_YELLOW);
+    LedMatrix_Fill(0, 0, 63, 31, COLOR_BLACK);
 }
 
 

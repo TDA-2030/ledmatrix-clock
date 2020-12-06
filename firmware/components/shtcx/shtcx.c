@@ -216,7 +216,7 @@ SHTC3_Status_TypeDef sht3cx_get_data(float *humi, float *temp)
     if (retval != SHTC3_Status_Nominal) {
         return exitOp(retval, __FILE__, __LINE__);
     }
-    delay_us(400);
+    delay(100);
     switch (_mode) { // Handle the two different ways of waiting for a measurement (polling or clock stretching)
     case SHTC3_CMD_CSE_RHF_NPM:
     case SHTC3_CMD_CSE_RHF_LPM:

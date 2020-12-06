@@ -429,7 +429,7 @@ void calendar_get_lunar_str(const calendar_t *calendar, char *str)
     } else {
         offset += _StrCopy(&str[offset], monthcode[out_calendar.w_month - 1]);
     }
-
+    offset += _StrCopy(&str[offset], "月"); // 月
     if (out_calendar.w_date > 10) {
         offset += _StrCopy(&str[offset], nongliday[out_calendar.w_date / 10]);
     } else {

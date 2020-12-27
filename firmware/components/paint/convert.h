@@ -1,5 +1,5 @@
-#ifndef APP_SHOW_TEXT_H_
-#define APP_SHOW_TEXT_H_
+#ifndef _FONT_CONVERT_H_
+#define _FONT_CONVERT_H_
 
 #ifdef __cplusplus 
 extern "C" {

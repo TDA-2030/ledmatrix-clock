@@ -20,7 +20,7 @@
 #include "freertos/semphr.h"
 
 #include "paint.h"
-#include "show_text.h"
+#include "convert.h"
 
 
 static const char *TAG = "lcd paint";
@@ -50,7 +50,7 @@ void iot_paint_clear(int color)
 {
     uint8_t i, j;
 
-    for (i = 0; i < LED_MATRIX_MAX_HEIGHT; i++) { //把R,G缓冲区全部数据清0
+    for (i = 0; i < LED_MATRIX_MAX_HEIGHT; i++) {
         for (j = 0; j < LED_MATRIX_MAX_WIDTH; j++) {
             g_lcd.draw_pixel(j, i, COLOR_BLACK);
         }
@@ -124,7 +124,9 @@ typedef struct {
     uint16_t buf_height;
     const sFONT *font;
     uint16_t x_offset;
+    uint8_t residence_time;
     uint8_t state;
+    void (*done_cb)(void *arg);
 } roll_text_data_t;
 
 static roll_text_data_t *rtd;
@@ -139,11 +141,13 @@ void paint_roll_text_create(int x, int y, int width)
         ESP_LOGE(TAG, "alloc mem for roll text failed");
         return;
     }
+    memset(rtd, 0, sizeof(roll_text_data_t));
     rtd->state = 0;
     rtd->x = x;
     rtd->y = y;
     rtd->width = width;
     rtd->buf = NULL;
+    rtd->residence_time = 60;
 }
 
 void paint_roll_text_set_string(const char *str, const sFONT *font)
@@ -190,8 +194,14 @@ void paint_roll_text_set_string(const char *str, const sFONT *font)
     rtd->state = 1;
 }
 
-void paint_roll_text_handler(void)
+void paint_roll_text_register_done_cb(void (*done_cb)(void *arg))
 {
+    rtd->done_cb = done_cb;
+}
+
+static void paint_roll_text_draw(void)
+{
+    static uint8_t pause_times=0;
     if (NULL == rtd || 0 == rtd->state) {
         return;
     }
@@ -208,9 +218,23 @@ void paint_roll_text_handler(void)
                 g_lcd.draw_pixel(x, y, BMP[rtd->buf_width * (y - y0) + (x + rtd->x_offset)]);
             }
         }
-        rtd->x_offset++;
+        if(0 == rtd->x_offset) {
+            pause_times++;
+        }
+        if(pause_times > rtd->residence_time) {
+            rtd->x_offset++;
+        }
+        
     } else {
-        rtd->x_offset = 0;
+        if(pause_times > 0) {
+            pause_times--;
+        } else {
+            rtd->x_offset = 0;
+            pause_times = 0;
+            if(NULL != rtd->done_cb) {
+                rtd->done_cb(rtd);
+            }
+        }
     }
 }
 
@@ -224,6 +248,16 @@ void paint_roll_text_delete(void)
         rtd = NULL;
     }
 }
+
+typedef struct {
+    uint16_t x;
+    uint16_t y;
+    uint8_t hour;
+    uint8_t min;
+    uint8_t sec;
+    uint8_t mode;
+}clock_num_t;
+static clock_num_t *clock_handle = NULL;
 
 static void draw_num_yoffset(int16_t x, int16_t y, int16_t y_offet, uint8_t num, const sFONT *font)
 {
@@ -266,11 +300,19 @@ static void draw_num_yoffset(int16_t x, int16_t y, int16_t y_offet, uint8_t num,
     }
 }
 
-
-
 //===============================================================
-void paint_show_clock(uint16_t x, uint16_t y, uint8_t hour, uint8_t min, uint8_t sec)
+static void paint_show_clock()
 {
+    if (NULL == clock_handle) {
+        return;
+    }
+
+    uint16_t x = clock_handle->x;
+    uint16_t y = clock_handle->y;
+    uint8_t hour = clock_handle->hour;
+    uint8_t min = clock_handle->min;
+    uint8_t sec = clock_handle->sec;
+    
     static uint8_t last_hour = 10, last_min = 10, last_sec = 10;
     static uint8_t last_hour_l = 10, last_min_l = 10, last_sec_l = 10;
 
@@ -350,6 +392,39 @@ void paint_show_clock(uint16_t x, uint16_t y, uint8_t hour, uint8_t min, uint8_t
     x += 4;
 }
 
+void paint_clock_init(uint16_t x, uint16_t y)
+{
+    LCD_PAINT_CHECK(NULL == clock_handle, "clock aleady create");
+
+    clock_handle = malloc(sizeof(clock_num_t));
+    if (NULL == clock_handle) {
+        ESP_LOGE(TAG, "alloc mem for clock_handle failed");
+        return;
+    }
+    memset(clock_handle, 0, sizeof(clock_num_t));
+    clock_handle->x = x;
+    clock_handle->y = y;
+    uint8_t buffer[4];
+    memset(buffer, iot_paint_Get_point_color(), sizeof(buffer));
+    g_lcd.draw_bitmap(x + 17, y + 4, 2, 2, buffer);
+    g_lcd.draw_bitmap(x + 17, y + 10, 2, 2, buffer);
+    g_lcd.draw_bitmap(x + 37, y + 4, 2, 2, buffer);
+    g_lcd.draw_bitmap(x + 37, y + 10, 2, 2, buffer);
+}
+
+void paint_clock_update(uint8_t hour, uint8_t min, uint8_t sec)
+{
+    LCD_PAINT_CHECK(NULL != clock_handle, "clock not create");
+    clock_handle->hour = hour;
+    clock_handle->min = min;
+    clock_handle->sec = sec;
+}
+
+void paint_handler(void)
+{
+    paint_show_clock();
+    paint_roll_text_draw();
+}
 //===============================================================
 
 

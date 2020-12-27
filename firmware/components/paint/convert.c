@@ -1,18 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <sys/time.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
 #include "esp_log.h"
+#include "convert.h"
 
-#include "file_manage.h"
-#include "show_text.h"
-
-static const char *TAG = "text show";
-
+static const char *TAG = "text convert";
 
 /**
  *

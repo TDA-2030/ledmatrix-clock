@@ -15,7 +15,7 @@
 #define _LCD_PAINT_H
 
 #include "iot_fonts.h"
-#include "show_text.h"
+#include "convert.h"
 
 
 #ifdef __cplusplus
@@ -63,12 +63,13 @@ uint16_t iot_paint_Get_back_color(void);
 
 void paint_roll_text_create(int x, int y, int width);
 void paint_roll_text_set_string(const char *str, const sFONT *font);
-void paint_roll_text_handler(void);
+void paint_roll_text_register_done_cb(void (*done_cb)(void *arg));
 void paint_roll_text_delete(void);
 
-void paint_show_clock(uint16_t x, uint16_t y, uint8_t hour, uint8_t min, uint8_t sec);
+void paint_clock_init(uint16_t x, uint16_t y);
+void paint_clock_update(uint8_t hour, uint8_t min, uint8_t sec);
 
-
+void paint_handler(void);
 
 /**
  * @brief Draw a character on screen

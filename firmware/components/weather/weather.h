@@ -34,7 +34,7 @@ typedef struct{
 
 
 uint8_t weather_get(const char *cityid, weather_type_t type);
-
+void weather_get_str(const char *cityid, weather_type_t type, char *str);
 char *weather_code2str(uint8_t code);
 
 #endif

@@ -4,6 +4,7 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
 
@@ -61,80 +62,109 @@ calendar_t *get_calendar_time(void)
     return &cdr;
 }
 
-
-
 void Display_task(void *pvParameter)
 {
     LedMatrix_Clear();
     iot_paint_Set_point_color(COLOR_GREEN);
 
-    uint8_t times = 0, x = 4, y = 0;
+    uint8_t x = 4, y = 0;
 
-    LedMatrix_Fill(x + 17, y + 4, x + 18, y + 5, iot_paint_Get_point_color());
-    LedMatrix_Fill(x + 17, y + 10, x + 18, y + 11, iot_paint_Get_point_color());
-    LedMatrix_Fill(x + 37, y + 4, x + 38, y + 5, iot_paint_Get_point_color());
-    LedMatrix_Fill(x + 37, y + 10, x + 38, y + 11, iot_paint_Get_point_color());
+    paint_clock_init(x, y);
     calendar_t *cdr = get_calendar_time();
     while (1) {
-        if (++times > 33) {
-            times = 0;
-            cdr = get_calendar_time();
-            
-        }
-        paint_show_clock(x, y, cdr->hour, cdr->min, cdr->sec);
-        vTaskDelay(30 / portTICK_PERIOD_MS);
+        cdr = get_calendar_time();
+        paint_clock_update(cdr->hour, cdr->min, cdr->sec);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
+}
+
+static EventGroupHandle_t xCreatedEventGroup;
+
+static void toll_done_cb(void *arg)
+{
+    xEventGroupSetBits(xCreatedEventGroup, BIT0);
 }
 
 void net_handle_task(void *pvParameter)
 {
     char str[128];
     sht3cx_init();
-    paint_roll_text_create(2, 16, 60);
-    paint_roll_text_set_string("请你为我再将双手舞动，我会知道你在那个角落，看人生匆匆，愿我们同享光荣，愿我们的梦永不落空", &Font16_gbk);
-    vTaskDelay(6000 / portTICK_PERIOD_MS);
-    paint_roll_text_delete();
+
+    xCreatedEventGroup = xEventGroupCreate();
+
     while (1) {
         calendar_t *cdr = get_calendar_time();
-        memset(str, 0, sizeof(str));
-        calendar_get_lunar_str(cdr, str); ESP_LOGI(TAG, "%s", str);
-        calendar_get_jieqi_str(cdr, str); ESP_LOGI(TAG, "%s", str);
-
-        // weather_get("jian", WEATHER_TYPE_DAY);
-        // weather_get("jian", WEATHER_TYPE_NOW);
-        {
-            float temperature, humidity;
-            sht3cx_get_data(&humidity, &temperature);
-            ESP_LOGI(TAG, "temp=%2.1f, humi=%2.1f", temperature, humidity);
-            sprintf(str, "%2.1fC %2.0f%%", temperature, humidity);
-
-            // iot_paint_draw_string(0, 16, );
-            iot_paint_draw_string(0, 25, str, &Font8);
-            memset(str, 0, sizeof(str));
-        }
+        LedMatrix_SetLight(get_right_brightness(cdr->hour));
 
         {
             static const char *Cdr_i2week[7] = { "天", "一", "二", "三", "四", "五", "六",};
-            uint16_t x=0, y=14;
+            uint16_t x = 0, y = 14;
             sprintf(str, "%u", cdr->w_month);
-            iot_paint_draw_string(x, y+2, str, &Font8);x+=Font8.Width * strlen(str);memset(str, 0, 10);
-            iot_paint_draw_string(x, y, "月", &Font10_hz);x+=Font10_hz.Width;
+            iot_paint_draw_string(x, y + 2, str, &Font8); x += Font8.Width * strlen(str); memset(str, 0, 10);
+            iot_paint_draw_string(x, y, "月", &Font10_hz); x += Font10_hz.Width;
 
             sprintf(str, "%u", cdr->w_date);
-            iot_paint_draw_string(x, y+2, str, &Font8);x+=Font8.Width * strlen(str);memset(str, 0, 10);
-            iot_paint_draw_string(x, y, "日", &Font10_hz);x+=Font10_hz.Width;
+            iot_paint_draw_string(x, y + 2, str, &Font8); x += Font8.Width * strlen(str); memset(str, 0, 10);
+            iot_paint_draw_string(x, y, "日", &Font10_hz); x += Font10_hz.Width;
 
-            x+=3;
-            iot_paint_draw_string(x, y, "周", &Font10_hz);x+=Font10_hz.Width;
+            x += 3;
+            iot_paint_draw_string(x, y, "周", &Font10_hz); x += Font10_hz.Width;
             sprintf(str, "%u", cdr->week);
             iot_paint_draw_string(x, y, Cdr_i2week[cdr->week], &Font10_hz);
-            // sprintf(str, "%u-%u %u", cdr->w_month, cdr->w_date, cdr->week);
-            // ESP_LOGI(TAG, "%s", str);
-            
-        }
-        LedMatrix_SetLight(get_right_brightness(cdr->hour));
+            {
+                float temperature, humidity;
+                sht3cx_get_data(&humidity, &temperature);
+                ESP_LOGI(TAG, "temp=%2.1f, humi=%2.1f", temperature, humidity);
+                sprintf(str, "%2.1fC %2.0f%%", temperature, humidity);
 
-        vTaskDelay(15000 / portTICK_PERIOD_MS);
+                // iot_paint_draw_string(0, 16, );
+                iot_paint_draw_string(0, 25, str, &Font8);
+                memset(str, 0, sizeof(str));
+            }
+
+            vTaskDelay(25000 / portTICK_PERIOD_MS);
+        }
+        
+        {
+            char jieqi[34];
+            char lunar[34];
+            memset(jieqi, 0, sizeof(jieqi));
+            calendar_get_jieqi_str(cdr, jieqi);
+            memset(lunar, 0, sizeof(lunar));
+            calendar_get_lunar_str(cdr, lunar);
+            memset(str, 0, sizeof(str));
+            strcat(str, "今天是农历");
+            strcat(str, lunar);
+            strcat(str, "，");
+            strcat(str, jieqi);
+            ESP_LOGI(TAG, "%s", str);
+            paint_roll_text_create(2, 16, 60);
+            paint_roll_text_register_done_cb(toll_done_cb);
+            paint_roll_text_set_string(str, &Font16_gbk);
+            xEventGroupWaitBits(xCreatedEventGroup, BIT0, pdTRUE, pdFALSE, portMAX_DELAY);
+            paint_roll_text_delete();
+        }
+        {
+            memset(str, 0, sizeof(str));
+            weather_get_str("shanghai", WEATHER_TYPE_NOW, str);
+
+            paint_roll_text_create(2, 16, 60);
+            paint_roll_text_register_done_cb(toll_done_cb);
+            paint_roll_text_set_string(str, &Font16_gbk);
+            xEventGroupWaitBits(xCreatedEventGroup, BIT0, pdTRUE, pdFALSE, portMAX_DELAY);
+            paint_roll_text_delete();
+        }
+        {
+            memset(str, 0, sizeof(str));
+            weather_get_str("shanghai", WEATHER_TYPE_DAY, str);
+
+            paint_roll_text_create(2, 16, 60);
+            paint_roll_text_register_done_cb(toll_done_cb);
+            paint_roll_text_set_string(str, &Font16_gbk);
+            xEventGroupWaitBits(xCreatedEventGroup, BIT0, pdTRUE, pdFALSE, portMAX_DELAY);
+            paint_roll_text_delete();
+        }
+
     }
 }
 
@@ -142,7 +172,7 @@ static void paint_handler_task(void *args)
 {
     while (1) {
         vTaskDelay(30 / portTICK_PERIOD_MS);
-        paint_roll_text_handler();
+        paint_handler();
     }
 }
 
@@ -156,6 +186,7 @@ void app_main()
     ESP_ERROR_CHECK(ret);
     board_init();
 
+    /** Determine whether to restore the settings by reading the restart count */
     int restart_cnt = restart_count_get();
     ESP_LOGI(TAG, "Restart count=[%d]", restart_cnt);
     if (restart_cnt >= RESTART_COUNT_RESET) {
@@ -176,7 +207,7 @@ void app_main()
     vTaskDelay(500 / portTICK_PERIOD_MS);
 
     bool is_configured;
-    captive_portal_start("CLK_CONFIG", NULL, &is_configured);
+    captive_portal_start("Hello-clk", NULL, &is_configured);
     if (is_configured) {
         wifi_config_t wifi_config;
         esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);

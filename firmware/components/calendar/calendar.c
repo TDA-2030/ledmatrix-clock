@@ -13,6 +13,7 @@
 #include "string.h"
 #include "calendar.h"
 
+static const char *TAG = "calendar";
 //月份数据表
 static const uint8_t table_week[12] = {0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5}; //月修正数据表
 //平年的月份日期表
@@ -414,7 +415,7 @@ void calendar_get_lunar_str(const calendar_t *calendar, char *str)
     calendar_t out_calendar;
     uint32_t offset=0;
 
-    // memset(str, 0, sizeof(s));
+    memset(str, 0, sizeof(23));
     // _StrCopy(str, s);
     if (GetChinaCalendar(calendar, &out_calendar)) {
         return;
@@ -499,7 +500,7 @@ void calendar_get_jieqi_str(const calendar_t *calendar, char *str)
     if (GetJieQi(temp.w_year, temp.w_month, temp.w_date, &JQdate)) {
         return ;
     }
-    memset(&str[0], 0, 15);
+    memset(&str[0], 0, 22);
     JQ = (temp.w_month - 1) * 2 ;                          //获得节气顺序标号(0～23
     if (temp.w_date >= 15) {
         JQ++;    //判断是否是上半月
@@ -511,14 +512,15 @@ void calendar_get_jieqi_str(const calendar_t *calendar, char *str)
     }
     //今天不是一个节气日
     offset += _StrCopy(&str[offset], "离");
-    if (temp.w_date < JQdate) {                             //如果今天日期小于本月的节气日期
+    if (temp.w_date < JQdate) {                     //如果今天日期小于本月的节气日期
         offset += _StrCopy(&str[offset], JieQiStr[JQ]);
         temp.w_date = JQdate - temp.w_date;
     } else {                                        //如果今天日期大于本月的节气日期
-        if ((JQ + 1) > 23) {
-            return ;
+        int8_t s_JQ = JQ;
+        if ((s_JQ + 1) > 23) {
+            s_JQ -= 24;
         }
-        offset += _StrCopy(&str[offset], JieQiStr[JQ + 1]);
+        offset += _StrCopy(&str[offset], JieQiStr[s_JQ + 1]);
         if (temp.w_date < 15) {
             GetJieQi(temp.w_year, temp.w_month, 15, &JQdate);
             temp.w_date = JQdate - temp.w_date;
@@ -531,6 +533,7 @@ void calendar_get_jieqi_str(const calendar_t *calendar, char *str)
             }
             if (++temp.w_month == 13) {
                 temp.w_month = 1;
+                temp.w_year++;
             }
             GetJieQi(temp.w_year, temp.w_month, 1, &JQdate);
             temp.w_date = MaxDay - temp.w_date + JQdate;
@@ -543,8 +546,6 @@ void calendar_get_jieqi_str(const calendar_t *calendar, char *str)
     
     return ;
 }
-
-
 
 //年份表
 static unsigned char const year_code[597] = {

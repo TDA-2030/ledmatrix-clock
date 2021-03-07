@@ -236,32 +236,6 @@ F 3 "https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32d
 	1    2850 3050
 	1    0    0    -1  
 $EndComp
-Text Label 2450 6150 0    50   ~ 0
-RXD0
-Text Label 2450 6350 0    50   ~ 0
-BOOT
-Text Label 2450 6250 0    50   ~ 0
-EN
-Text Label 2450 6050 0    50   ~ 0
-TXD0
-Wire Wire Line
-	2300 6050 2450 6050
-Wire Wire Line
-	2300 6150 2450 6150
-Wire Wire Line
-	2300 6250 2450 6250
-Wire Wire Line
-	2300 6350 2450 6350
-$Sheet
-S 1050 5900 1250 650 
-U 5F4ECFED
-F0 "Sheet5F4ECFED" 50
-F1 "power.sch" 50
-F2 "CHIP_IO0" O R 2300 6350 50 
-F3 "CHIP_EN" O R 2300 6250 50 
-F4 "TXD" O R 2300 6150 50 
-F5 "RXD" I R 2300 6050 50 
-$EndSheet
 $Comp
 L Connector_Generic:Conn_02x08_Odd_Even J2
 U 1 1 5FA617FF
@@ -487,7 +461,6 @@ F 3 "" H 5600 2100 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Connection ~ 5600 2100
-NoConn ~ 3450 3950
 NoConn ~ 3450 4050
 NoConn ~ 3450 4150
 $Comp
@@ -778,4 +751,110 @@ F 3 "" H 7800 4600 50  0001 C CNN
 	1    7800 4600
 	0    1    1    0   
 $EndComp
+$Comp
+L Connector_Generic:Conn_01x03 J?
+U 1 1 604711F6
+P 1150 5200
+F 0 "J?" H 1250 4850 50  0000 C CNN
+F 1 "Conn_01x03" H 1200 4950 50  0000 C CNN
+F 2 "" H 1150 5200 50  0001 C CNN
+F 3 "~" H 1150 5200 50  0001 C CNN
+	1    1150 5200
+	-1   0    0    1   
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 60472B23
+P 1550 5200
+F 0 "#PWR?" H 1550 4950 50  0001 C CNN
+F 1 "GND" H 1555 5027 50  0000 C CNN
+F 2 "" H 1550 5200 50  0001 C CNN
+F 3 "" H 1550 5200 50  0001 C CNN
+	1    1550 5200
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:+3.3V #PWR?
+U 1 1 60474054
+P 1500 4900
+F 0 "#PWR?" H 1500 4750 50  0001 C CNN
+F 1 "+3.3V" H 1515 5073 50  0000 C CNN
+F 2 "" H 1500 4900 50  0001 C CNN
+F 3 "" H 1500 4900 50  0001 C CNN
+	1    1500 4900
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C?
+U 1 1 60476314
+P 1500 5050
+F 0 "C?" H 1600 5050 50  0000 L CNN
+F 1 "0.1uf" H 1500 4950 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0402_1005Metric" H 1538 4900 50  0001 C CNN
+F 3 "~" H 1500 5050 50  0001 C CNN
+	1    1500 5050
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1550 5200 1500 5200
+Connection ~ 1500 5200
+Wire Wire Line
+	1500 5200 1350 5200
+Wire Wire Line
+	1350 5100 1350 4900
+Wire Wire Line
+	1350 4900 1500 4900
+Connection ~ 1500 4900
+Text Label 1950 5300 0    50   ~ 0
+IR_SIGNAL
+Text Label 3550 3950 0    50   ~ 0
+IR_SIGNAL
+Wire Wire Line
+	3450 3950 3550 3950
+$Comp
+L Device:R R?
+U 1 1 60480409
+P 1900 5050
+F 0 "R?" H 1970 5096 50  0000 L CNN
+F 1 "10K" H 1970 5005 50  0000 L CNN
+F 2 "Resistor_SMD:R_0402_1005Metric" V 1830 5050 50  0001 C CNN
+F 3 "~" H 1900 5050 50  0001 C CNN
+	1    1900 5050
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1350 5300 1900 5300
+Wire Wire Line
+	1900 5200 1900 5300
+Connection ~ 1900 5300
+Wire Wire Line
+	1900 5300 1950 5300
+$Sheet
+S 1050 5900 1250 650 
+U 5F4ECFED
+F0 "Sheet5F4ECFED" 50
+F1 "power.sch" 50
+F2 "CHIP_IO0" O R 2300 6350 50 
+F3 "CHIP_EN" O R 2300 6250 50 
+F4 "TXD" O R 2300 6150 50 
+F5 "RXD" I R 2300 6050 50 
+$EndSheet
+Wire Wire Line
+	2300 6350 2450 6350
+Wire Wire Line
+	2300 6250 2450 6250
+Wire Wire Line
+	2300 6150 2450 6150
+Wire Wire Line
+	2300 6050 2450 6050
+Text Label 2450 6050 0    50   ~ 0
+TXD0
+Text Label 2450 6250 0    50   ~ 0
+EN
+Text Label 2450 6350 0    50   ~ 0
+BOOT
+Text Label 2450 6150 0    50   ~ 0
+RXD0
+Wire Wire Line
+	1900 4900 1500 4900
 $EndSCHEMATC

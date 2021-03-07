@@ -12,6 +12,7 @@
 #include "helper.h"
 #include "shtcx.h"
 #include "led_matrix.h"
+#include "ssd1306.h"
 #include "captive_portal.h"
 #include "file_manage.h"
 #include "file_server.h"
@@ -175,7 +176,7 @@ static void paint_handler_task(void *args)
         paint_handler();
     }
 }
-
+#define USE_LED_MATRIX CONFIG_USE_LEDMATRIX
 void app_main()
 {
     esp_err_t ret = nvs_flash_init();
@@ -194,13 +195,21 @@ void app_main()
         ESP_ERROR_CHECK(nvs_flash_erase());
         esp_restart();
     }
-
-    LedMatrix_init();
     ESP_ERROR_CHECK(fm_init()); /* Initialize file storage */
+#if USE_LED_MATRIX
+    LedMatrix_init();
     lcd_driver_fun_t lcd_drv = {
         .draw_pixel = LedMatrix_DrawPoint,
         .draw_bitmap = LedMatrix_DrawBMP,
     };
+#else
+    lcd_ssd1306_init();
+    lcd_driver_fun_t lcd_drv = {
+        .draw_pixel = lcd_ssd1306_draw_pixel,
+        .draw_bitmap = lcd_ssd1306_draw_bitmap,
+    };
+#endif
+    
     iot_paint_init(&lcd_drv);
     LedMatrix_SetLight(4095);
     xTaskCreate(&paint_handler_task, "paint", 1024 * 2, NULL, 6, NULL);

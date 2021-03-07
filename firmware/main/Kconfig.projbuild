@@ -1,0 +1,7 @@
+menu "Configuration"
+
+    config USE_LEDMATRIX
+        bool "Select ledmatrix display device"
+        default y
+
+endmenu

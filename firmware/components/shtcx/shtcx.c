@@ -10,7 +10,8 @@ An Arduino library for the Sensirion SHTC3 humidity and temerature sensor
 static const char *TAG = "SHTCx";
 
 SHTC3_MeasurementModes_TypeDef _mode;
-static i2c_bus_t *g_i2c_bus = NULL;
+static i2c_bus_handle_t g_i2c_bus = NULL;
+static i2c_bus_device_handle_t g_i2c_dev = NULL;
 
 bool _inProcess;    // True when a macro-scale function is in progress in the library - blocks small functions from messing with sleep functions
 bool _staySleeping; // Used to indicate if the sensor should be kept in sleep mode
@@ -38,9 +39,8 @@ void inline delay_us(uint32_t us)
 
 static void sht3cx_read(uint16_t *data, uint8_t *crc)
 {
-    i2c_set_address(g_i2c_bus, SHTC3_ADDR_7BIT);
     uint8_t dat[5];
-    i2c_master_read_slave(g_i2c_bus, dat, 3);
+    i2c_bus_read_bytes(g_i2c_dev, NULL_I2C_MEM_ADDR, 3, dat);
 
     *data = ((dat[0] << 8) | dat[1]);
     *crc = dat[2];
@@ -49,12 +49,11 @@ static void sht3cx_read(uint16_t *data, uint8_t *crc)
 
 SHTC3_Status_TypeDef sht3cx_sendCommand(uint16_t cmd)
 {
-    int8_t res = 0;
-    i2c_set_address(g_i2c_bus, SHTC3_ADDR_7BIT);
+    int res = 0;
     uint8_t dat[5];
     dat[0] = (cmd >> 8);
     dat[1] = (cmd & 0xFF);
-    res = i2c_master_write_slave(g_i2c_bus, dat, 2);
+    res = i2c_bus_write_bytes(g_i2c_dev, NULL_I2C_MEM_ADDR, 2, dat);
 
     if (res) {
         return SHTC3_Status_Error;
@@ -121,8 +120,16 @@ SHTC3_Status_TypeDef sht3cx_init(void)
 {
     SHTC3_Status_TypeDef retval = SHTC3_Status_Nominal;
 
-    i2c_config_t i2c_conf = DEFAULT_I2C_BUS_MASTER(5, 4);
-    g_i2c_bus = i2c_bus_create(I2C_NUM_0, &i2c_conf);
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = 5,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = 4,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 100000,
+    };
+    g_i2c_bus = i2c_bus_create(I2C_NUM_0, &conf);
+    g_i2c_dev = i2c_bus_device_create(g_i2c_bus, SHTC3_ADDR_7BIT, conf.master.clk_speed);
 
     retval = sht3cx_checkID(); // Verify that the sensor is actually an SHTC3
     if (retval != SHTC3_Status_Nominal) {
@@ -222,7 +229,7 @@ SHTC3_Status_TypeDef sht3cx_get_data(float *humi, float *temp)
     case SHTC3_CMD_CSE_RHF_LPM:
     case SHTC3_CMD_CSE_TF_NPM:
     case SHTC3_CMD_CSE_TF_LPM:     // Address+read will yield an ACK and then clock stretching will occur
-        if (0 != i2c_master_read_slave(g_i2c_bus, dat, 6)) {
+        if (0 != i2c_bus_read_bytes(g_i2c_dev, NULL_I2C_MEM_ADDR, 6, dat)) {
             exitOp(SHTC3_Status_Error, __FILE__, __LINE__);
         }
 

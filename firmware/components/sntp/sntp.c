@@ -21,15 +21,6 @@
 static const char *TAG = "sntp";
 
 
-#ifdef CONFIG_SNTP_TIME_SYNC_METHOD_CUSTOM
-void sntp_sync_time(struct timeval *tv)
-{
-    settimeofday(tv, NULL);
-    ESP_LOGI(TAG, "Time is synchronized from custom code");
-    sntp_set_sync_status(SNTP_SYNC_STATUS_COMPLETED);
-}
-#endif
-
 static void time_sync_notification_cb(struct timeval *tv)
 {
     ESP_LOGI(TAG, "Notification of a time synchronization event");
@@ -39,13 +30,10 @@ static void initialize_sntp(void)
 {
     ESP_LOGI(TAG, "Initializing SNTP");
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(1, "210.72.145.44");		// 国家授时中心服务器 IP 地址
     sntp_setservername(0, "ntp.aliyun.com");
     sntp_setservername(1, "pool.ntp.org");
-    sntp_setservername(2, "ntp.ntsc.ac.cn");
     sntp_set_time_sync_notification_cb(time_sync_notification_cb);
-#ifdef CONFIG_SNTP_TIME_SYNC_METHOD_SMOOTH
-    sntp_set_sync_mode(SNTP_SYNC_MODE_SMOOTH);
-#endif
     sntp_init();
 }
 
@@ -57,14 +45,12 @@ static void obtain_time(void)
     time_t now = 0;
     struct tm timeinfo = {0};
     int retry = 0;
-    const int retry_count = 10;
+    const int retry_count = 20;
     while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count)
     {
         ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-    time(&now);
-    localtime_r(&now, &timeinfo);
 }
 
 void sntp_start(void)
@@ -81,27 +67,6 @@ void sntp_start(void)
         // update 'now' variable with current time
         time(&now);
     }
-#ifdef CONFIG_SNTP_TIME_SYNC_METHOD_SMOOTH
-    else
-    {
-        // add 500 ms error to the current system time.
-        // Only to demonstrate a work of adjusting method!
-        {
-            ESP_LOGI(TAG, "Add a error for test adjtime");
-            struct timeval tv_now;
-            gettimeofday(&tv_now, NULL);
-            int64_t cpu_time = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
-            int64_t error_time = cpu_time + 500 * 1000L;
-            struct timeval tv_error = {.tv_sec = error_time / 1000000L, .tv_usec = error_time % 1000000L};
-            settimeofday(&tv_error, NULL);
-        }
-
-        ESP_LOGI(TAG, "Time was set, now just adjusting it. Use SMOOTH SYNC method.");
-        obtain_time();
-        // update 'now' variable with current time
-        time(&now);
-    }
-#endif
 
     char strftime_buf[64];
 
@@ -118,20 +83,6 @@ void sntp_start(void)
     localtime_r(&now, &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
     ESP_LOGI(TAG, "The current date/time in Shanghai is: %s", strftime_buf);
-
-    if (sntp_get_sync_mode() == SNTP_SYNC_MODE_SMOOTH)
-    {
-        struct timeval outdelta;
-        while (sntp_get_sync_status() == SNTP_SYNC_STATUS_IN_PROGRESS)
-        {
-            adjtime(NULL, &outdelta);
-            ESP_LOGI(TAG, "Waiting for adjusting time ... outdelta = %li sec: %li ms: %li us",
-                     outdelta.tv_sec,
-                     outdelta.tv_usec / 1000,
-                     outdelta.tv_usec % 1000);
-            vTaskDelay(2000 / portTICK_PERIOD_MS);
-        }
-    }
 }
 
 

@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name esp32)(type KiCad)(uri C:/Users/zhouli/Desktop/matrix-clock-pcb/library/esp32-wrover-kicad-master/esp32-wrover.pretty)(options "")(descr ""))
+)

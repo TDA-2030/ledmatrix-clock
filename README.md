@@ -17,6 +17,16 @@ A LED matrix clock controlled by [ESP32](https://www.espressif.com/en/products/s
 - [ ] Play music with Bluetooth
 - [ ] Display any text from configuration webpage write
 
+## Information displayed
+
+- Time
+- Date
+- Week
+- Temperature
+- Humidity
+- Lunar calendar
+- Recent weather
+
 ## Demonstration
 
 ![clock](reference/clock.gif)

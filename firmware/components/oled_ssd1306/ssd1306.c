@@ -179,9 +179,8 @@ static void oled_refresh_task(void *args)
     while (1)
     {
         lcd_ssd1306_refresh();
-        vTaskDelay(70 / portTICK_PERIOD_MS);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
-    
 }
 
 
@@ -221,7 +220,7 @@ esp_err_t lcd_ssd1306_init(void)
     LCD_WRITE_CMD(0xA6); // Disable Inverse Display On (0xa6/a7)
     LCD_WRITE_CMD(0xAF); //--turn on oled panel
 
-    lcd_ssd1306_set_rotate(SCR_DIR_LRTB);
+    lcd_ssd1306_set_rotate(SCR_DIR_RLTB);
     xTaskCreate(&oled_refresh_task, "oled refresh", 1024 * 2, NULL, 2, NULL);
     return ESP_OK;
 }
@@ -304,7 +303,7 @@ static esp_err_t lcd_ssd1306_write_ram_data(uint16_t color)
     return ESP_ERR_NOT_SUPPORTED;
 }
 
-esp_err_t lcd_ssd1306_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
+static esp_err_t _lcd_ssd1306_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 {
     uint8_t pos,bx,temp=0;
 	if(x>127||y>63)return ESP_FAIL;
@@ -313,6 +312,17 @@ esp_err_t lcd_ssd1306_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 	temp=1<<(7-bx);
 	if(color)g_gram[pos][x]|=temp;
 	else g_gram[pos][x]&=~temp;
+    return ESP_OK;
+}
+
+esp_err_t lcd_ssd1306_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
+{
+    x*=2;
+    y*=2;
+    // _lcd_ssd1306_draw_pixel(x, y, color);
+    _lcd_ssd1306_draw_pixel(x+1, y, color);
+    _lcd_ssd1306_draw_pixel(x, y+1, color);
+    // _lcd_ssd1306_draw_pixel(x+1, y+1, color);
     return ESP_OK;
 }
 
@@ -354,16 +364,16 @@ static esp_err_t lcd_ssd1306_refresh(void)
     //     return ESP_FAIL;
     // }
 
-    // ret = LCD_WRITE(p, 128 * LCD_BPP / 8 * 64);
+    // ret = LCD_WRITE(p, 128 * 8);
     // LCD_CHECK(ESP_OK == ret, "Draw bitmap failed", ESP_FAIL);
 
-	uint8_t i,n;		    
+	uint8_t i=0;
 	for(i=0;i<8;i++)  
 	{  
 		LCD_WRITE_CMD (0xb0+i);
-		LCD_WRITE_CMD (0x00);
+		LCD_WRITE_CMD (0x02); //实际上是用的屏幕IC是SH1106
 		LCD_WRITE_CMD (0x10); 
-		for(n=0;n<128;n++)LCD_WRITE_DATA(g_gram[i][127-n]); 
+        LCD_WRITE(&g_gram[i], 128);
 	}
     return ESP_OK;
 }

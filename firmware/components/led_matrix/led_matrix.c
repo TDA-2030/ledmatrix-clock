@@ -8,7 +8,6 @@
 
 #include "led_matrix.h"
 
-
 #define GPIO_STCP      18
 #define GPIO_SHCP      19
 #define GPIO_OE        23
@@ -25,8 +24,6 @@
 #define GPIO_OUTPUT_PIN_SEL ((1ULL << GPIO_STCP) | (1ULL << GPIO_SHCP) | (1ULL << GPIO_OE) | \
                             (1ULL << GPIO_SDA_R1) | (1ULL << GPIO_SDA_G1) | (1ULL << GPIO_SDA_R2) | (1ULL << GPIO_SDA_G2) | \
                             (1ULL << GPIO_A) | (1ULL << GPIO_B) | (1ULL << GPIO_C) | (1ULL << GPIO_D))
-
-
 
 //输出宏定义
 #define STCP_HIGH      GPIO.out_w1ts = (1ULL << (GPIO_STCP))
@@ -50,7 +47,6 @@
 #define SDA_G_HIGH     GPIO.out1_w1ts.data = (1ULL << (GPIO_SDA_G2-32))
 #define SDA_G_LOW      GPIO.out1_w1tc.data = (1ULL << (GPIO_SDA_G2-32))
 
-
 #define SET_LINE(dat)   {GPIO.out_w1tc = 0xf000;GPIO.out_w1ts = (dat);}
 
 //屏幕显示缓存
@@ -62,8 +58,6 @@ typedef struct {
 //屏幕显示缓存
 static LED_Matrix_Buf_t LED_Matrix_Buf;
 static uint32_t led_scan_line[16] = {0}; /*16行段码*/
-
-
 
 // 定时刷新屏幕
 void IRAM_ATTR led_matrix_flush(void)
@@ -252,7 +246,6 @@ void LedMatrix_init(void)
     LedMatrix_Fill(0, 0, 63, 31, COLOR_BLACK);
 }
 
-
 //清屏函数
 void LedMatrix_Clear(void)
 {
@@ -265,7 +258,6 @@ void LedMatrix_Clear(void)
         }
     }
 }
-
 
 //画点
 //x:0~63
@@ -296,7 +288,6 @@ void LedMatrix_DrawPoint(uint16_t x, uint16_t y, uint16_t color)
     }
 }
 
-
 //x1,y1,x2,y2 填充区域的对角坐标
 //确保x1<=x2;y1<=y2 0<=x1<=127 0<=y1<=63
 //dot:0,清空;1,填充
@@ -310,7 +301,6 @@ void LedMatrix_Fill(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t
     }
 }
 
-
 void LedMatrix_DrawBMP(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, const uint8_t *BMP)
 {
     uint16_t x, y;
@@ -323,35 +313,3 @@ void LedMatrix_DrawBMP(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height
         }
     }
 }
-
-
-//在指定位置画一个指定大小的圆
-//(x,y):中心点
-//r    :半径
-// void LedMatrix_Draw_Circle(uint16_t x0, uint16_t y0, uint16_t r)
-// {
-//     int a, b;
-//     int di;
-//     a = 0; b = r;
-//     di = 3 - (r << 1);       //判断下个点位置的标志
-//     while (a <= b) {
-//         LedMatrix_DrawPoint(x0 + a, y0 - b, POINT_COLOR);       //5
-//         LedMatrix_DrawPoint(x0 + b, y0 - a, POINT_COLOR);       //0
-//         LedMatrix_DrawPoint(x0 + b, y0 + a, POINT_COLOR);       //4
-//         LedMatrix_DrawPoint(x0 + a, y0 + b, POINT_COLOR);       //6
-//         LedMatrix_DrawPoint(x0 - a, y0 + b, POINT_COLOR);       //1
-//         LedMatrix_DrawPoint(x0 - b, y0 + a, POINT_COLOR);
-//         LedMatrix_DrawPoint(x0 - a, y0 - b, POINT_COLOR);       //2
-//         LedMatrix_DrawPoint(x0 - b, y0 - a, POINT_COLOR);       //7
-//         a++;
-//         //使用Bresenham算法画圆
-//         if (di < 0) {
-//             di += 4 * a + 6;
-//         } else {
-//             di += 10 + 4 * (a - b);
-//             b--;
-//         }
-//     }
-// }
-
-

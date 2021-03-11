@@ -183,7 +183,6 @@ static void oled_refresh_task(void *args)
     }
 }
 
-
 esp_err_t lcd_ssd1306_init(void)
 {
     i2c_lcd_driver_init();
@@ -230,8 +229,6 @@ esp_err_t lcd_ssd1306_deinit(void)
     memset(&g_lcd_handle, 0, sizeof(scr_handle_t));
     return ESP_OK;
 }
-
-
 
 esp_err_t lcd_ssd1306_set_rotate(scr_dir_t dir)
 {
@@ -303,7 +300,7 @@ static esp_err_t lcd_ssd1306_write_ram_data(uint16_t color)
     return ESP_ERR_NOT_SUPPORTED;
 }
 
-static esp_err_t _lcd_ssd1306_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
+static esp_err_t lcd_ssd1306_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 {
     uint8_t pos,bx,temp=0;
 	if(x>127||y>63)return ESP_FAIL;
@@ -315,32 +312,20 @@ static esp_err_t _lcd_ssd1306_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
     return ESP_OK;
 }
 
-esp_err_t lcd_ssd1306_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
+esp_err_t lcd_ssd1306_draw_4pixel(uint16_t x, uint16_t y, uint16_t color)
 {
     x*=2;
     y*=2;
-    // _lcd_ssd1306_draw_pixel(x, y, color);
-    _lcd_ssd1306_draw_pixel(x+1, y, color);
-    _lcd_ssd1306_draw_pixel(x, y+1, color);
-    // _lcd_ssd1306_draw_pixel(x+1, y+1, color);
+    // lcd_ssd1306_draw_pixel(x, y, color);
+    lcd_ssd1306_draw_pixel(x+1, y, color);
+    lcd_ssd1306_draw_pixel(x, y+1, color);
+    // lcd_ssd1306_draw_pixel(x+1, y+1, color);
     return ESP_OK;
 }
 
 esp_err_t lcd_ssd1306_draw_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *bitmap)
 {
     LCD_CHECK((x + w <= g_lcd_handle.width) && (y + h <= g_lcd_handle.height), "The set coordinates exceed the screen size", ESP_ERR_INVALID_ARG);
-    // esp_err_t ret = ESP_OK;
-    // uint8_t *p = (uint8_t *)bitmap;
-
-    // LCD_IFACE_ACQUIRE();
-    // ret = lcd_ssd1306_set_window(x, y, x + w - 1, y + h - 1);
-    // if (ESP_OK != ret) {
-    //     return ESP_FAIL;
-    // }
-
-    // ret = LCD_WRITE(p, w * LCD_BPP / 8 * h);
-    // LCD_IFACE_RELEASE();
-    // LCD_CHECK(ESP_OK == ret, "Draw bitmap failed", ESP_FAIL);
 
     uint16_t i, j;
     uint16_t x1 = x + w ;
@@ -348,7 +333,7 @@ esp_err_t lcd_ssd1306_draw_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
     for (j = y; j < y1; j++) {
         for (i = x; i < x1; i++) {
-            lcd_ssd1306_draw_pixel(i, j, *bitmap++);
+            lcd_ssd1306_draw_4pixel(i, j, *bitmap++);
         }
     }
     return ESP_OK;
@@ -356,25 +341,16 @@ esp_err_t lcd_ssd1306_draw_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
 static esp_err_t lcd_ssd1306_refresh(void)
 {
-    // esp_err_t ret = ESP_OK;
-    // uint8_t *p = (uint8_t *)g_gram;
+    esp_err_t ret = ESP_OK;
+    uint8_t *p = (uint8_t *)g_gram;
 
-    // ret = lcd_ssd1306_set_window(0, 0, 127, 63);
-    // if (ESP_OK != ret) {
-    //     return ESP_FAIL;
-    // }
+    ret = lcd_ssd1306_set_window(0, 0, 127, 63);
+    if (ESP_OK != ret) {
+        return ESP_FAIL;
+    }
 
-    // ret = LCD_WRITE(p, 128 * 8);
-    // LCD_CHECK(ESP_OK == ret, "Draw bitmap failed", ESP_FAIL);
-
-	uint8_t i=0;
-	for(i=0;i<8;i++)  
-	{  
-		LCD_WRITE_CMD (0xb0+i);
-		LCD_WRITE_CMD (0x02); //实际上是用的屏幕IC是SH1106
-		LCD_WRITE_CMD (0x10); 
-        LCD_WRITE(&g_gram[i], 128);
-	}
+    ret = LCD_WRITE(p, 128 * 8);
+    LCD_CHECK(ESP_OK == ret, "Draw bitmap failed", ESP_FAIL);
     return ESP_OK;
 }
 
@@ -401,7 +377,7 @@ esp_err_t lcd_ssd1306_display_off(void)
 esp_err_t lcd_ssd1306_set_contrast(uint8_t contrast)
 {
     esp_err_t ret;
-    ret = LCD_WRITE_CMD(0x81);
+    ret = LCD_WRITE_CMD(SSD1306_CMD_SET_CONTRAST);
     ret |= LCD_WRITE_CMD(contrast);
     LCD_CHECK(ESP_OK == ret, "Set contrast failed", ESP_FAIL);
     return ESP_OK;

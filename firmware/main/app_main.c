@@ -12,6 +12,7 @@
 #include "helper.h"
 #include "shtcx.h"
 #include "led_matrix.h"
+#include "sh1106.h"
 #include "ssd1306.h"
 #include "captive_portal.h"
 #include "file_manage.h"
@@ -113,7 +114,7 @@ void net_handle_task(void *pvParameter)
             sprintf(str, "%u", cdr->week);
             iot_paint_draw_string(x, y, Cdr_i2week[cdr->week], &Font10_hz);
             {
-                float temperature, humidity;
+                float temperature=0, humidity=0;
                 sht3cx_get_data(&humidity, &temperature);
                 ESP_LOGI(TAG, "temp=%2.1f, humi=%2.1f", temperature, humidity);
                 sprintf(str, "%2.1fC %2.0f%%", temperature, humidity);
@@ -203,10 +204,10 @@ void app_main()
         .draw_bitmap = LedMatrix_DrawBMP,
     };
 #else
-    lcd_ssd1306_init();
+    lcd_sh1106_init();
     lcd_driver_fun_t lcd_drv = {
-        .draw_pixel = lcd_ssd1306_draw_pixel,
-        .draw_bitmap = lcd_ssd1306_draw_bitmap,
+        .draw_pixel = lcd_sh1106_draw_4pixel,
+        .draw_bitmap = lcd_sh1106_draw_bitmap,
     };
 #endif
     

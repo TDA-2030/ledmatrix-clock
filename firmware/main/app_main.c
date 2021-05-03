@@ -14,6 +14,7 @@
 #include "led_matrix.h"
 #include "sh1106.h"
 #include "ssd1306.h"
+#include "tpl0401.h"
 #include "captive_portal.h"
 #include "file_manage.h"
 #include "file_server.h"
@@ -248,6 +249,8 @@ void app_main()
     xTaskCreate(&net_handle_task, "net_handle_task", 1024 * 6, NULL, 5, NULL);
 
     mp3_player_init();
+    tpl0401_init();
+    tpl0401_set_resistance(127);
     // mp3_player_start("/spiffs/01.mp3");
     mp3_player_set_volume(0);
     esp_wifi_set_ps(WIFI_PS_MAX_MODEM);

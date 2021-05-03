@@ -47,6 +47,7 @@ typedef enum
 
 
 SHTC3_Status_TypeDef sht3cx_init(void);
+i2c_bus_handle_t sht3cx_get_i2c_bus(void);
 SHTC3_Status_TypeDef sht3cx_checkID(void);
 SHTC3_Status_TypeDef sht3cx_get_data(float *humi, float *temp);
 

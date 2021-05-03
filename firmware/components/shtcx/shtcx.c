@@ -116,6 +116,11 @@ SHTC3_Status_TypeDef checkCRC(uint16_t packet, uint8_t cs)
     return exitOp(SHTC3_Status_Nominal, __FILE__, __LINE__);
 }
 
+i2c_bus_handle_t sht3cx_get_i2c_bus(void)
+ {
+     return g_i2c_bus;
+ }
+
 SHTC3_Status_TypeDef sht3cx_init(void)
 {
     SHTC3_Status_TypeDef retval = SHTC3_Status_Nominal;

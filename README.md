@@ -2,7 +2,7 @@
 
 ![license](https://img.shields.io/github/license/TDA-2030/ledmatrix-clock)
 
-![build](https://img.shields.io/badge/build-passing-brightgreen)
+[![Build firmware](https://github.com/TDA-2030/ledmatrix-clock/actions/workflows/build.yml/badge.svg)](https://github.com/TDA-2030/ledmatrix-clock/actions/workflows/build.yml)
 
 A LED matrix clock controlled by [ESP32](https://www.espressif.com/en/products/socs/esp32) for a room. This clock includes a 32x64 Red and Green led matrix panel. 
 

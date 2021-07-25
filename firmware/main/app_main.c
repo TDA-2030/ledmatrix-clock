@@ -7,6 +7,8 @@
 #include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "esp_ota_ops.h"
+#include "esp_partition.h"
 
 #include "board.h"
 #include "helper.h"
@@ -189,6 +191,9 @@ void app_main()
     ESP_ERROR_CHECK(ret);
     board_init();
 
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    ESP_LOGI(TAG, "Running partition: %s", running->label);
+
     /** Determine whether to restore the settings by reading the restart count */
     int restart_cnt = restart_count_get();
     ESP_LOGI(TAG, "Restart count=[%d]", restart_cnt);
@@ -213,7 +218,9 @@ void app_main()
 #endif
     
     iot_paint_init(&lcd_drv);
+    iot_paint_Set_point_color(COLOR_RED);
     LedMatrix_SetLight(4095);
+    iot_paint_draw_string(0, 0, "booting", &Font12);
     xTaskCreate(&paint_handler_task, "paint", 1024 * 2, NULL, 6, NULL);
     vTaskDelay(500 / portTICK_PERIOD_MS);
 

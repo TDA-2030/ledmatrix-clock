@@ -10,8 +10,9 @@ A LED matrix clock controlled by [ESP32](https://www.espressif.com/en/products/s
 
 - [x] Connect Internet with Wi-Fi
 - [x] Auto update time 
+- [x] Web OTA
 - [ ] Time report on the hour
-- [ ] Automatically update weather information 
+- [x] Automatically update weather information 
 - [x] Automatically adjust display brightness 
 - [ ] The lunar calendar and solar terms can be displayed
 - [ ] Play music with Bluetooth

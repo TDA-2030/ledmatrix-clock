@@ -20,10 +20,10 @@
 #include "captive_portal.h"
 #include "file_manage.h"
 #include "file_server.h"
-#include "weather.h"
-#include "app_sntp.h"
+#include "src/weather.h"
+#include "src/ntp.h"
+#include "src/calendar.h"
 #include "app_main.h"
-#include "calendar.h"
 #include "mp3_player.h"
 #include "paint.h"
 #include "app_bt_audio.h"
@@ -219,7 +219,7 @@ void app_main()
     
     iot_paint_init(&lcd_drv);
     iot_paint_Set_point_color(COLOR_RED);
-    LedMatrix_SetLight(4095);
+    LedMatrix_SetLight(4096/5);
     iot_paint_draw_string(0, 0, "booting", &Font12);
     xTaskCreate(&paint_handler_task, "paint", 1024 * 2, NULL, 6, NULL);
     vTaskDelay(500 / portTICK_PERIOD_MS);

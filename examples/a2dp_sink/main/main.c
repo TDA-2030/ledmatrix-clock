@@ -33,6 +33,12 @@
 #include "esp_avrc_api.h"
 #include "driver/i2s.h"
 
+#include "screen_driver.h"
+#include "mic.h"
+#include "esp_timer.h"
+
+static const char *TAG = "bt fft";
+
 /* event for handler "bt_av_hdl_stack_up */
 enum {
     BT_APP_EVT_STACK_UP = 0,
@@ -40,7 +46,188 @@ enum {
 
 /* handler for bluetooth stack enabled events */
 static void bt_av_hdl_stack_evt(uint16_t event, void *p_param);
+static scr_driver_t g_lcd;
 
+static void screen_clear(scr_driver_t *lcd, int color)
+{
+    scr_info_t lcd_info;
+    lcd->get_info(&lcd_info);
+
+    uint16_t *buffer = malloc(lcd_info.width * sizeof(uint16_t));
+    if (NULL == buffer) {
+        for (size_t y = 0; y < lcd_info.height; y++) {
+            for (size_t x = 0; x < lcd_info.width; x++) {
+                lcd->draw_pixel(x, y, color);
+            }
+        }
+    } else {
+        for (size_t i = 0; i < lcd_info.width; i++) {
+            buffer[i] = color;
+        }
+
+        for (int y = 0; y < lcd_info.height; y++) {
+            lcd->draw_bitmap(0, y, lcd_info.width, 1, buffer);
+        }
+
+        free(buffer);
+    }
+}
+
+static void _lcd_init()
+{
+    spi_config_t spi_cfg = {
+        .miso_io_num = -1,
+        .mosi_io_num = 21,
+        .sclk_io_num = 22,
+        .max_transfer_sz = 240 * 240 * 2 + 10,
+    };
+    spi_bus_handle_t spi_bus = spi_bus_create(2, &spi_cfg);
+    // TEST_ASSERT_NOT_NULL(spi_bus);
+
+    scr_interface_spi_config_t spi_lcd_cfg = {
+        .spi_bus = spi_bus,
+        .pin_num_cs = 5,
+        .pin_num_dc = 19,
+        .clk_freq = 80000000,
+        .swap_data = false,
+    };
+
+    scr_interface_driver_t *iface_drv;
+    if (ESP_OK == scr_interface_create(SCREEN_IFACE_SPI, &spi_lcd_cfg, &iface_drv)) {
+    }
+
+    scr_controller_config_t lcd_cfg = {0};
+    lcd_cfg.interface_drv = iface_drv;
+    lcd_cfg.pin_num_rst = -1;
+    lcd_cfg.pin_num_bckl = 23;
+    lcd_cfg.rst_active_level = 0;
+    lcd_cfg.bckl_active_level = 1;
+    lcd_cfg.offset_hor = 0;
+    lcd_cfg.offset_ver = 0;
+    lcd_cfg.width = 240;
+    lcd_cfg.height = 120;
+    lcd_cfg.rotate = SCR_DIR_LRBT;
+    if (ESP_OK == scr_find_driver(SCREEN_CONTROLLER_ST7789, &g_lcd)) {
+    }
+    if (ESP_OK == g_lcd.init(&lcd_cfg)) {
+    }
+    screen_clear(&g_lcd, COLOR_WHITE);
+}
+
+#include <math.h>
+#include "esp_dsp.h"
+#define N_SAMPLES 1024
+#define N N_SAMPLES
+#define CONFIG_DSP_MAX_FFT_SIZE 4096
+#define TAG BT_APP_CORE_TAG
+
+// Window coefficients
+__attribute__((aligned(16))) static float wind[N_SAMPLES];
+// working complex array
+__attribute__((aligned(16))) static float y_cf[N_SAMPLES * 2];
+static uint64_t g_period=0;
+
+static void _fft_init()
+{
+    esp_err_t ret;
+    ret = dsps_fft2r_init_fc32(NULL, CONFIG_DSP_MAX_FFT_SIZE);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Not possible to initialize FFT. Error = %i", ret);
+        return;
+    }
+
+    // Generate hann window
+    dsps_wind_hann_f32(wind, N);
+}
+
+void _fft_data_input(void *data, size_t data_size)
+{
+    static size_t received_len = 0;
+    data_size /= 4;
+    int16_t *ap = (int16_t *)data;
+    size_t read_len = 0;
+    while (data_size > 0) {
+        size_t empty = N - received_len;
+        if (empty > data_size) {
+            for (int i = 0; i < data_size; i++) {
+                y_cf[(received_len + i) * 2 + 0] = (float)ap[(read_len + i) * 2] / 32768.0;
+                // y_cf[(received_len+i)*2+1] = (float)ap[(read_len+i)*2+1]/32768.0;
+            }
+            received_len += data_size;
+            data_size -= data_size;
+            read_len += data_size;
+            return;
+        } else {
+            for (int i = 0; i < empty; i++) {
+                y_cf[(received_len + i) * 2 + 0] = (float)ap[(read_len + i) * 2] / 32768.0;
+                // y_cf[(received_len+i)*2+1] = (float)ap[(read_len+i)*2+1]/32768.0;
+            }
+            received_len += empty;
+            data_size -= empty;
+            read_len += empty;
+        }
+
+        if (received_len != N) {
+            ESP_LOGW(TAG, "len err");
+        }
+        received_len = 0;
+
+        static int cnt = 0;
+        if (++cnt > 2) {
+            cnt = 0;
+            // hanming window
+            for (int i = 0; i < N; i++) {
+                y_cf[i * 2 + 0] *= wind[i];
+                y_cf[i * 2 + 1] = 0; //= wind[i];
+            }
+            // FFT
+            dsps_fft2r_fc32(y_cf, N);
+            // Bit reverse
+            dsps_bit_rev_fc32(y_cf, N);
+            // Convert one complex vector to two complex vectors
+            dsps_cplx2reC_fc32(y_cf, N);
+            // Pointers to result arrays
+            float *y1_cf = &y_cf[0];
+            float *y2_cf = &y_cf[N_SAMPLES];
+
+            for (int i = 0; i < N / 2; i++) {
+                float a = y1_cf[i * 2 + 0];
+                float b = y1_cf[i * 2 + 1];
+                y1_cf[i] = 10 * log10f((a * a + b * b) / N);
+                // y2_cf[i] = 10 * log10f((y2_cf[i * 2 + 0] * y2_cf[i * 2 + 0] + y2_cf[i * 2 + 1] * y2_cf[i * 2 + 1])/N);
+            }
+            // Show power spectrum in 64x10 window from -100 to 0 dB from 0..N/4 samples
+            // ESP_LOGW(TAG, "Signal x1");
+            // dsps_view(y1_cf, N/2, 64, 10,  -60, 40, '*');
+            const int H = 50;
+            uint16_t disp_buf[H];
+            static uint64_t last_time=0;
+            uint64_t t = esp_timer_get_time();
+            g_period = t - last_time;
+            last_time = t;
+            for (size_t x = 0; x < 230; x++) {
+                float t = y1_cf[x * 2] + 40;
+                if (t < 0.0) {
+                    t = 0;
+                }
+
+                for (size_t y = 0; y < H; y++) {
+                    if (t >= y) {
+                        disp_buf[y] = 0x00F8;
+                    } else {
+                        disp_buf[y] = COLOR_WHITE;
+                    }
+                }
+                g_lcd.draw_bitmap(5 + x, 0, 1, H, disp_buf);
+            }
+        }
+    }
+}
+// mic_get_data(buffer, 16*16000*40/1000, &len, portMAX_DELAY);
+// int16_t *pcm = (int16_t *)buffer;
+// for (size_t i = 0; i < len / 2; i++) {
+//     pcm[i] = pcm[i] >> 8 | pcm[i]<<8;
+// }
 
 void app_main(void)
 {
@@ -52,22 +239,25 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(err);
 
+    _fft_init();
+    _lcd_init();
+    // mic_init(I2S_NUM_1);
+
     i2s_config_t i2s_config = {
 #ifdef CONFIG_EXAMPLE_A2DP_SINK_OUTPUT_INTERNAL_DAC
         .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN,
 #else
-        .mode = I2S_MODE_MASTER | I2S_MODE_TX,                                  // Only TX
+        .mode = I2S_MODE_MASTER | I2S_MODE_TX, // Only TX
 #endif
         .sample_rate = 44100,
         .bits_per_sample = 16,
-        .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,                           //2-channels
+        .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT, //2-channels
         .communication_format = I2S_COMM_FORMAT_STAND_MSB,
         .dma_buf_count = 6,
         .dma_buf_len = 60,
-        .intr_alloc_flags = 0,                                                  //Default interrupt priority
-        .tx_desc_auto_clear = true                                              //Auto clear tx descriptor on underflow
+        .intr_alloc_flags = 0,     //Default interrupt priority
+        .tx_desc_auto_clear = true //Auto clear tx descriptor on underflow
     };
-
 
     i2s_driver_install(0, &i2s_config, 0, NULL);
 #ifdef CONFIG_EXAMPLE_A2DP_SINK_OUTPUT_INTERNAL_DAC
@@ -78,12 +268,11 @@ void app_main(void)
         .bck_io_num = CONFIG_EXAMPLE_I2S_BCK_PIN,
         .ws_io_num = CONFIG_EXAMPLE_I2S_LRCK_PIN,
         .data_out_num = CONFIG_EXAMPLE_I2S_DATA_PIN,
-        .data_in_num = -1                                                       //Not used
+        .data_in_num = -1 //Not used
     };
 
     i2s_set_pin(0, &pin_config);
 #endif
-
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_BLE));
 
@@ -132,7 +321,12 @@ void app_main(void)
     pin_code[2] = '3';
     pin_code[3] = '4';
     esp_bt_gap_set_pin(pin_type, 4, pin_code);
-
+    while (1)
+    {
+        ESP_LOGW(TAG, "fps=%.2f\n", 1000.0f/(float)(g_period/1000));
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+    
 }
 
 void bt_app_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
@@ -187,7 +381,7 @@ static void bt_av_hdl_stack_evt(uint16_t event, void *p_param)
         esp_avrc_ct_init();
         esp_avrc_ct_register_callback(bt_app_rc_ct_cb);
         /* initialize AVRCP target */
-        assert (esp_avrc_tg_init() == ESP_OK);
+        assert(esp_avrc_tg_init() == ESP_OK);
         esp_avrc_tg_register_callback(bt_app_rc_tg_cb);
 
         esp_avrc_rn_evt_cap_mask_t evt_set = {0};

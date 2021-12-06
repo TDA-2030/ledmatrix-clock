@@ -8,8 +8,9 @@
 extern "C" {
 #endif
 
-void mic_init(i2s_port_t i2s_port);
-void mic_get_data(uint8_t *buffer, size_t size, size_t *bytes_read, TickType_t ticks_to_wait);
+void *mic_init(i2s_port_t i2s_port, int rate);
+void mic_deinit(void *handle);
+void mic_get_data(void *handle, uint8_t *in_buffer, size_t size, size_t *bytes_read);
 
 #ifdef __cplusplus
 }

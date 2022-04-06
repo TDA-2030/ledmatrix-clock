@@ -29,7 +29,7 @@
 #include "hal/gpio_ll.h"
 #include "esp_log.h"
 #include "i2s_lcd_driver.h"
-#include "esp_private/periph_ctrl.h"
+// #include "esp_private/periph_ctrl.h"
 
 static const char *TAG = "ESP32_I2S_LCD";
 

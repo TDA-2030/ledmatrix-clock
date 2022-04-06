@@ -50,6 +50,9 @@ static scr_driver_t g_lcd;
 static uint64_t g_period = 0;
 static uint16_t *disp_buf = NULL;
 
+extern const uint8_t font_zw[];
+extern const uint8_t bmp_160x60[];
+
 static void screen_clear(scr_driver_t *lcd, int color)
 {
     scr_info_t lcd_info;
@@ -194,6 +197,7 @@ static void disp_fft(uint16_t xx, int16_t yy, uint16_t w, uint16_t h, float *dat
     g_period = t - last_time;
     last_time = t;
     uint8_t r, g, b;
+    uint8_t *font = &bmp_160x60[0];
     for (size_t x = 0; x < w; x++) {
         float t = data[x ];
         if (t < 0.0) {
@@ -202,7 +206,13 @@ static void disp_fft(uint16_t xx, int16_t yy, uint16_t w, uint16_t h, float *dat
         for (size_t y = 0; y < h; y++) {
             int i = y * w + x;
             if (t >= y) {
-                color_hsv_to_rgb((t - y)*2, 100, 100, &r, &g, &b);
+                uint8_t value = 100;
+                if (y < 60 && x < 160) {
+                    uint8_t v = font[(60 - 1 - y) * 160 / 8 + x / 8];
+                    uint8_t s = x % 8;
+                    value = (v & (0x80 >> s)) ? 70 : value;
+                }
+                color_hsv_to_rgb((t - y) * 2, 100, value, &r, &g, &b);
                 uint16_t c = rgb888_to_565(r, g, b);
                 disp_buf[i] = c >> 8 | c << 8;
             } else {
@@ -294,7 +304,7 @@ void _fft_data_input(void *data, size_t data_size, float **out)
             for (int i = 0; i < N / 2; i++) {
                 float a = y1_cf[i * 2 + 0];
                 float b = y1_cf[i * 2 + 1];
-                y1_cf[i] = 12.0 * log10f((a * a + b * b) / N) + 60;
+                y1_cf[i] = 14.0 * log10f((a * a + b * b) / N) + 60;
                 // y2_cf[i] = 10 * log10f((y2_cf[i * 2 + 0] * y2_cf[i * 2 + 0] + y2_cf[i * 2 + 1] * y2_cf[i * 2 + 1])/N);
             }
             // Show power spectrum in 64x10 window from -100 to 0 dB from 0..N/4 samples

@@ -19,8 +19,8 @@
 #include "esp_ota_ops.h"
 #include "esp_flash_partitions.h"
 #include "esp_partition.h"
+#include "esp_image_format.h"
 #include "lwip/apps/netbiosns.h"
-#include "mdns.h"
 #include "esp_vfs.h"
 #include "esp_spiffs.h"
 #include "esp_http_server.h"
@@ -602,38 +602,38 @@ static esp_err_t delete_post_handler(httpd_req_t *req)
 static bool g_notice_mdns_init_flag = 0;
 #define CONFIG_EXAMPLE_MDNS_HOST_NAME "clock-home"
 #define MDNS_INSTANCE "esp home web server"
-static esp_err_t mdns_start(void)
-{
-    const int PORT = 80;
+// static esp_err_t mdns_start(void)
+// {
+//     const int PORT = 80;
 
 
-    mdns_init();
-    mdns_hostname_set(CONFIG_EXAMPLE_MDNS_HOST_NAME);
-    mdns_instance_name_set(MDNS_INSTANCE);
+//     mdns_init();
+//     mdns_hostname_set(CONFIG_EXAMPLE_MDNS_HOST_NAME);
+//     mdns_instance_name_set(MDNS_INSTANCE);
 
-    mdns_txt_item_t serviceTxtData[] = {
-        {"board", "esp32"},
-        {"path", "/"}
-    };
+//     mdns_txt_item_t serviceTxtData[] = {
+//         {"board", "esp32"},
+//         {"path", "/"}
+//     };
 
-    ESP_ERROR_CHECK(mdns_service_add("ESP32-WebServer", "_http", "_tcp", 80, serviceTxtData,
-                                     sizeof(serviceTxtData) / sizeof(serviceTxtData[0])));
+//     ESP_ERROR_CHECK(mdns_service_add("ESP32-WebServer", "_http", "_tcp", 80, serviceTxtData,
+//                                      sizeof(serviceTxtData) / sizeof(serviceTxtData[0])));
 
-    ESP_LOGI(TAG, "mdns service add, hostname:%s, port:%d", CONFIG_EXAMPLE_MDNS_HOST_NAME, PORT);
+//     ESP_LOGI(TAG, "mdns service add, hostname:%s, port:%d", CONFIG_EXAMPLE_MDNS_HOST_NAME, PORT);
 
-    g_notice_mdns_init_flag = true;
-    return ESP_OK;
-}
+//     g_notice_mdns_init_flag = true;
+//     return ESP_OK;
+// }
 
-static void mdns_stop(void)
-{
-    if (!g_notice_mdns_init_flag) {
-        return ;
-    }
+// static void mdns_stop(void)
+// {
+//     if (!g_notice_mdns_init_flag) {
+//         return ;
+//     }
 
-    mdns_free();
-    g_notice_mdns_init_flag = false;
-}
+//     mdns_free();
+//     g_notice_mdns_init_flag = false;
+// }
 
 /* Function to start the file server */
 esp_err_t start_file_server(void)
@@ -650,7 +650,7 @@ esp_err_t start_file_server(void)
         return ESP_ERR_INVALID_STATE;
     }
 
-    mdns_start();
+    // mdns_start();
     netbiosns_init();
     netbiosns_set_name(CONFIG_EXAMPLE_MDNS_HOST_NAME);
     /* Allocate memory for server data */

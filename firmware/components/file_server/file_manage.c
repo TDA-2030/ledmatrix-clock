@@ -15,7 +15,7 @@
 
 static const char *TAG = "file manage";
 
-#define USE_SPIFFS
+#define USE_FATFS
 
 static fs_info_t g_fs_info = {0};
 
@@ -170,21 +170,20 @@ static esp_err_t init_filesystem(void)
     ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
 
 #elif defined USE_FATFS
+    g_fs_info.base_path = CONFIG_BSP_SD_MOUNT_POINT;
+    g_fs_info.label = "storage";
 
-    g_fs_info.base_path = "/fatfs";
-    g_fs_info.label = "audio";
-
-    esp_vfs_fat_mount_config_t mount_config = {
-        .max_files = 5,
-        .format_if_mount_failed = true,
-        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
+    const esp_vfs_fat_mount_config_t mount_config = {
+        .max_files = 4,
+        .format_if_mount_failed = false,
+        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
     };
-    ESP_LOGI(TAG, "Initializing FATFS path=%s lable=%s", g_fs_info.base_path, g_fs_info.label);
-    ret = esp_vfs_fat_spiflash_mount(g_fs_info.base_path, g_fs_info.label, &mount_config, &g_wl_handle);
+
+    ESP_LOGI(TAG, "Mounting FAT filesystem in read/write mode");
+    ret = esp_vfs_fat_spiflash_mount_rw_wl(g_fs_info.base_path, g_fs_info.label, &mount_config, &g_wl_handle);
 
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to mount FATFS (%s)", esp_err_to_name(ret));
-        return ret;
     }
 
     // size_t bytes_total, bytes_free;

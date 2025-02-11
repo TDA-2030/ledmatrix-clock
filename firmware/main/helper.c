@@ -107,7 +107,7 @@ OPEN_FAIL:
 #define DEVICE_STORE_RESTART_COUNT_NAME_SPACE       "RestartCntName"
 #define DEVICE_STORE_RESTART_COUNT_KEY              "RestartCount"
 
-static void restart_count_erase_timercb(void *timer)
+static void restart_count_erase_timercb(TimerHandle_t timer)
 {
     if (!xTimerStop(timer, portMAX_DELAY)) {
         ESP_LOGE(TAG, "xTimerStop timer: %p", timer);
@@ -147,7 +147,7 @@ int restart_count_get()
     ret = iot_param_save(DEVICE_STORE_RESTART_COUNT_NAME_SPACE, DEVICE_STORE_RESTART_COUNT_KEY, &restart_count, sizeof(uint32_t));
     HELPER_CHECK(ret == ESP_OK, "Save the number of restarts failed", restart_count);
 
-    timer = xTimerCreate("restart_count_erase", DEVICE_RESTART_TIMEOUT_MS / portTICK_RATE_MS,
+    timer = xTimerCreate("restart_count_erase", pdMS_TO_TICKS(DEVICE_RESTART_TIMEOUT_MS),
                          false, NULL, restart_count_erase_timercb);
     HELPER_CHECK(NULL != timer, "xTimerCreate failed", restart_count);
 

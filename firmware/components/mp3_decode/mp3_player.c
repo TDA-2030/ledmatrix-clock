@@ -167,9 +167,9 @@ static void audio_task(void *arg)
             size_t bytes_write = 0;
             size_t write_len = mp3FrameInfo.outputSamps * (mp3FrameInfo.bitsPerSample / 8);
 #ifdef PLAY_USE_DAC
-            dac_audio_write((uint8_t *)out_buffer, write_len, &bytes_write, 1000 / portTICK_RATE_MS);
+            dac_audio_write((uint8_t *)out_buffer, write_len, &bytes_write, 1000 / portTICK_PERIOD_MS);
 #else
-            pwm_audio_write((uint8_t *)out_buffer, write_len, &bytes_write, 1000 / portTICK_RATE_MS);
+            pwm_audio_write((uint8_t *)out_buffer, write_len, &bytes_write, 1000 / portTICK_PERIOD_MS);
 #endif
             ESP_LOGD(TAG, "i2s_wr_len=%d, bytes_write=%d", write_len, bytes_write);
         }
@@ -206,8 +206,8 @@ esp_err_t mp3_player_init(void)
     pac.gpio_num_right     = -1;  /**< Use left channel only */
     pac.ledc_channel_right = LEDC_CHANNEL_0;
     pac.ledc_timer_sel     = LEDC_TIMER_1;
-    pac.tg_num             = TIMER_GROUP_1;
-    pac.timer_num          = TIMER_0;
+    // pac.tg_num             = TIMER_GROUP_1;
+    // pac.timer_num          = TIMER_0;
     pac.ringbuf_len        = 1024 * 8;
     ret = pwm_audio_init(&pac);
     MP3_PLAYER_CHECK(ESP_OK == ret, "pwm audio init failed", ESP_FAIL);

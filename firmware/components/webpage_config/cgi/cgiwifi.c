@@ -5,9 +5,11 @@
 #include "esp_log.h"
 #include "esp_event_loop.h"
 #include "esp_wifi.h"
+#include "esp_netif.h"
+#include "esp_mac.h"
 
-#include "../cgi/include/cgiwifi.h"
-#include "../adapt/include/esp32_wifi.h"
+#include "../cgi/cgiwifi.h"
+#include "../adapt/esp32_wifi.h"
 
 static const char *TAG = "cgiWifi";
 
@@ -403,7 +405,7 @@ esp_err_t cgiWiFiScan(httpd_req_t *req)
                 // ESP_LOGD( TAG, "Fill in json code for an access point" );
                 int rssi = g_cgiWifiAps.apData[pos].rssi;
 
-                len = sprintf(buff, "{\"essid\": \"%s\", \"bssid\": \"" MACSTR "\", \"rssi\": \"%d\", \"rssi_perc\": \"%d\", \"enc\": \"%d\", \"channel\": \"%d\"}%s\r\n",
+                len = sprintf(buff, "{\"essid\": \"%s\", \"bssid\": \"" MACSTR "\", \"rssi\": \"%d\", \"rssi_perc\": \"%d\", \"enc\": \"%d\", \"channel\": \"%d\"}%s",
                               g_cgiWifiAps.apData[pos].ssid,
                               MAC2STR(g_cgiWifiAps.apData[pos].bssid),
                               rssi,
@@ -485,7 +487,7 @@ static void staWiFiDoConnect(void *arg)
         g_connTryStatus = CONNTRY_FAIL;
     }
 
-    ESP_LOGD(TAG, "Delete task staWiFiDoConnect");
+    ESP_LOGI(TAG, "Delete task staWiFiDoConnect");
     vTaskDelete(NULL);
 }
 
@@ -550,8 +552,8 @@ esp_err_t cgiWiFiConnStatus(httpd_req_t *req)
         EventBits_t bits = xEventGroupGetBits(g_wifi_event_group);
 
         if (bits & WIFI_STA_CONNECTED) {
-            tcpip_adapter_ip_info_t ipInfo;
-            tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
+            esp_netif_ip_info_t ipInfo;
+            esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), &ipInfo);
             len = sprintf(buff, "{\"status\": \"success\", \"ip\": \"" IPSTR "\"}", GOOD_IP2STR(ipInfo.ip.addr));
         } else {
             len = sprintf(buff, "{ \"status\": \"working\" }");
@@ -590,6 +592,7 @@ esp_err_t cgiWiFiConfigSuccess(httpd_req_t *req)
         if (strncmp(config_status, "success", strlen("success")) == 0) {
             ESP_LOGI(TAG, "WiFi config success, set WiFi operating mode as only STA mode.");
             wifiSetNewMode(WIFI_MODE_STA);
+            esp_event_post(APP_NETWORK_EVENT, APP_NETWORK_EVENT_CONFIG_SUCCESS, NULL, 0, portMAX_DELAY);
             g_connTryStatus = CONNTRY_SUCCESS;
         } else {
             ESP_LOGE(TAG, "WiFi config fail!");

@@ -1,10 +1,13 @@
-idf_component_register(SRC_DIRS "." "src"
-                    INCLUDE_DIRS "."
-                    )
+idf_component_register(SRC_DIRS . calendar ui
+                    INCLUDE_DIRS .
+                    EMBED_FILES SourceHanSansSC-Medium-Min.ttf)
 
-set(IMAGE_DIR "../spiffs_image")
+target_compile_definitions(${COMPONENT_LIB} PRIVATE LV_LVGL_H_INCLUDE_SIMPLE)
+
+
+set(IMAGE_DIR ../rootfs)
 if(EXISTS ${IMAGE_DIR})
-    spiffs_create_partition_image(storage ${IMAGE_DIR} FLASH_IN_PROJECT)
+    fatfs_create_spiflash_image(storage ${IMAGE_DIR} FLASH_IN_PROJECT PRESERVE_TIME)
 else()
-    message(FATAL_ERROR "${IMAGE_DIR}/dist doesn't exit. ")
+    message(FATAL_ERROR "${IMAGE_DIR} doesn't exit. ")
 endif()

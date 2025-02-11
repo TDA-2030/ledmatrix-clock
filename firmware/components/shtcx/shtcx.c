@@ -33,7 +33,7 @@ void inline delay(uint32_t ms)
 
 void inline delay_us(uint32_t us)
 {
-    ets_delay_us(us);
+    esp_rom_delay_us(us);
 }
 
 

@@ -3,7 +3,7 @@
 nvs,      data, nvs,     ,        0x4000,
 phy_init, data, phy,     ,        0x1000,
 otadata,  data, ota,     ,        0x2000,
-ota_0,    app,  ota_0,   ,        1400K,
-ota_1,    app,  ota_1,   ,        1400K,
-storage,  data, spiffs,  ,        1000K, 
+ota_0,    app,  ota_0,   ,        3500K,
+# ota_1,    app,  ota_1,   ,        1400K,
+storage,  data, fat,  ,        200K, 
 

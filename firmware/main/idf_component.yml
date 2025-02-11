@@ -1,0 +1,9 @@
+dependencies:
+
+  lvgl/lvgl:
+    version: 8.4.*
+    public: true
+
+  # Espressif
+  # freetype: ^2.13.0
+  espressif/pwm_audio: ^1.1.2
